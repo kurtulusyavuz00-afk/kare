@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Crossword — Kelime Bulmaca</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- ===================== HOME ===================== -->
+<section id="homeScreen" class="screen active">
+    <div class="home-bg"></div>
+    <div class="home-content">
+        <div class="home-brand">
+            <div class="home-kicker">Gazete Bulmacası</div>
+            <h1 class="home-title">CROSSWORD</h1>
+            <p class="home-subtitle">Türkçe × English</p>
+        </div>
+
+        <div class="home-actions">
+            <button id="startGameButton" class="primary-button home-cta" type="button">
+                Oyuna Başla
+            </button>
+            <button id="openLevelsButton" class="secondary-button home-cta" type="button">
+                Seviyeler
+            </button>
+        </div>
+
+        <div class="home-stats">
+            <div class="home-stat">
+                <span class="home-stat-label">Tamamlanan</span>
+                <strong id="homeCompletedText">0 / 20</strong>
+            </div>
+            <div class="home-stat">
+                <span class="home-stat-label">Son Seviye</span>
+                <strong id="homeLastLevelText">—</strong>
+            </div>
+        </div>
+
+        <div class="home-progress">
+            <div class="home-progress-track">
+                <div id="homeProgressFill" class="home-progress-fill"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================== LEVELS ===================== -->
+<section id="levelsScreen" class="screen">
+    <div class="screen-header">
+        <button id="backHomeFromLevels" class="icon-button" type="button" aria-label="Geri">←</button>
+        <div>
+            <div class="section-label">SEVİYELER</div>
+            <h2 class="screen-heading">Bulmaca Seç</h2>
+        </div>
+    </div>
+    <div id="levelsGrid" class="levels-grid"></div>
+</section>
+
+
+<!-- ===================== GAME ===================== -->
+<section id="gameScreen" class="screen">
+    <div class="app">
+        <header class="app-header">
+            <div class="game-nav">
+                <button id="backHomeFromGame" class="icon-button" type="button" aria-label="Ana sayfa">←</button>
+                <div>
+                    <div id="levelTitle" class="app-title">Seviye 1</div>
+                    <div class="app-subtitle">Türkçe açıklama · İngilizce / Türkçe cevap</div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <button id="openLevelsFromGame" class="ghost-button" type="button">Seviyeler</button>
+                <div class="progress-container">
+                    <div id="progressText" class="progress-text">0 / 0</div>
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="game-area">
+            <section class="puzzle-card">
+                <div class="puzzle-header">
+                    <div>
+                        <div class="section-label">BULMACA</div>
+                        <div id="selectedWordLabel" class="selected-word-label">Bir kelime seç</div>
+                    </div>
+                    <div id="directionBadge" class="direction-badge">—</div>
+                </div>
+                <div class="puzzle-wrapper">
+                    <div id="puzzle"></div>
+                </div>
+            </section>
+
+            <section id="cluePanel" class="clue-panel">
+                <div class="clue-panel-top">
+                    <div class="section-label">SEÇİLİ AÇIKLAMA</div>
+                    <div class="clue-panel-actions">
+                        <button id="hintButton" class="ghost-button" type="button">İpucu</button>
+                        <button id="openAnswerButton" class="primary-button compact-button" type="button">Cevabı Gir</button>
+                    </div>
+                </div>
+                <div id="cluePanelText" class="clue-panel-text">Bir açıklama veya hücre seçin</div>
+                <div id="cluePanelMeta" class="clue-panel-meta"></div>
+            </section>
+
+            <section class="clues-card">
+                <div class="clues-section">
+                    <div class="clues-title"><span>Yatay</span></div>
+                    <div id="acrossClues"></div>
+                </div>
+                <div class="clues-section">
+                    <div class="clues-title"><span>Dikey</span></div>
+                    <div id="downClues"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+</section>
+
+
+<!-- ===================== ANSWER MODAL ===================== -->
+<div id="answerModal" class="modal">
+    <div id="modalBox" class="modal-box">
+        <button id="closeModal" class="close-button" aria-label="Kapat" type="button">×</button>
+        <div id="modalNumber" class="modal-number"></div>
+        <div class="section-label modal-label">AÇIKLAMA</div>
+        <div id="modalQuestion" class="modal-question"></div>
+        <div id="modalLength" class="modal-length"></div>
+        <div class="answer-label">CEVAP</div>
+        <input
+            id="answerInput"
+            type="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            enterkeyhint="done"
+            placeholder="Cevabınızı yazın"
+        >
+        <div id="resultMessage" class="result-message"></div>
+        <div class="modal-buttons">
+            <button id="cancelButton" class="secondary-button" type="button">Kapat</button>
+            <button id="okButton" class="primary-button" type="button">Kontrol Et</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ===================== COMPLETE MODAL ===================== -->
+<div id="completeModal" class="modal">
+    <div class="complete-box">
+        <div class="complete-icon">✓</div>
+        <div class="complete-title" id="completeTitle">Bulmaca Tamamlandı!</div>
+        <div class="complete-text">Tüm kelimeleri başarıyla buldun.</div>
+        <div id="completeStats" class="complete-stats"></div>
+        <div class="complete-actions">
+            <button id="nextLevelButton" class="primary-button complete-button" type="button">Sonraki Seviye</button>
+            <button id="backToLevelsButton" class="secondary-button complete-button" type="button">Seviyelere Dön</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="levels.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
