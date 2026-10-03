@@ -73,7 +73,6 @@
     let wrongTotal = 0;
     let levelStartedAt = 0;
     let answerBusy = false;
-    let wrongCloseTimer = null;
 
     /* -----------------------------------------------------
        PROGRESS MANAGER
@@ -1056,11 +1055,6 @@
             return;
         }
 
-        if (wrongCloseTimer) {
-            clearTimeout(wrongCloseTimer);
-            wrongCloseTimer = null;
-        }
-
         currentWord = placement;
         modalBox.classList.remove("shake", "error-flash");
         modalNumber.textContent = `${placement.number} ${
@@ -1085,10 +1079,6 @@
         answerModal.classList.remove("show");
         currentWord = null;
         answerBusy = false;
-        if (wrongCloseTimer) {
-            clearTimeout(wrongCloseTimer);
-            wrongCloseTimer = null;
-        }
     }
 
     function checkAnswer() {
@@ -1134,11 +1124,7 @@
         renderClues();
         persistLevelState();
 
-        answerBusy = true;
-        wrongCloseTimer = setTimeout(() => {
-            closeAnswerModal();
-            answerBusy = false;
-        }, 850);
+        answerBusy = false;
     }
 
     function useHint() {
