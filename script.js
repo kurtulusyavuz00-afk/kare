@@ -722,54 +722,104 @@
         homeProgressFill.style.width = `${percent}%`;
     }
 
+    const LEVEL_CATEGORIES = [
+        { key: "easy", label: "Kolay" },
+        { key: "medium", label: "Orta" },
+        { key: "hard", label: "Zor" }
+    ];
+
+    function getLevelCategoryKey(level) {
+        if (level.difficulty === "easy" || level.difficulty === "medium") {
+            return level.difficulty;
+        }
+        return "hard";
+    }
+
+    function getLevelDisplayTitle(level) {
+        const categoryKey = getLevelCategoryKey(level);
+        const category = LEVEL_CATEGORIES.find((item) => item.key === categoryKey);
+        const categoryLevels = LEVELS.filter(
+            (item) => getLevelCategoryKey(item) === categoryKey
+        );
+        const levelNumber = categoryLevels.findIndex((item) => item.id === level.id) + 1;
+        return `${category.label} Seviye ${levelNumber}`;
+    }
+
     function renderLevelsScreen() {
-        levelsGrid.innerHTML = "";
-        LEVELS.forEach((level) => {
-            const entry = progress.levels[level.id];
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = "level-card";
-            card.dataset.status = entry.status;
+        levelsGrid.replaceChildren();
 
-            let icon = "🔒";
-            if (entry.status === LEVEL_STATUS.COMPLETED) {
-                icon = "✓";
-            } else if (entry.status === LEVEL_STATUS.IN_PROGRESS) {
-                icon = "▸";
-            } else if (entry.status === LEVEL_STATUS.UNLOCKED) {
-                icon = "○";
+        LEVEL_CATEGORIES.forEach((category) => {
+            const categoryLevels = LEVELS.filter(
+                (level) => getLevelCategoryKey(level) === category.key
+            );
+            if (categoryLevels.length === 0) {
+                return;
             }
 
-            const solvedCount = (entry.solvedWordIds || []).length;
-            const totalWords = level.words.length;
-            const meta =
-                entry.status === LEVEL_STATUS.COMPLETED
-                    ? "Tamamlandı"
-                    : entry.status === LEVEL_STATUS.IN_PROGRESS
-                      ? `${solvedCount} / ${totalWords}`
-                      : entry.status === LEVEL_STATUS.LOCKED
-                        ? "Kilitli"
-                        : ({
-                            easy: "Kolay",
-                            medium: "Orta",
-                            hard: "Zor",
-                            expert: "Uzman",
-                            master: "Usta"
-                        }[level.difficulty] || level.difficulty);
+            const section = document.createElement("section");
+            section.className = "level-category";
+            section.dataset.difficulty = category.key;
 
-            card.innerHTML = `
-                <span class="level-card-icon">${icon}</span>
-                <span class="level-card-title">${level.title}</span>
-                <span class="level-card-meta">${meta}</span>
-            `;
+            const heading = document.createElement("h3");
+            heading.className = "level-category-title";
+            heading.textContent = category.label;
 
-            if (entry.status !== LEVEL_STATUS.LOCKED) {
-                card.addEventListener("click", () => startLevel(level.id));
-            } else {
-                card.disabled = true;
-            }
+            const categoryGrid = document.createElement("div");
+            categoryGrid.className = "level-category-grid";
 
-            levelsGrid.appendChild(card);
+            categoryLevels.forEach((level) => {
+                const entry = progress.levels[level.id];
+                const card = document.createElement("button");
+                card.type = "button";
+                card.className = "level-card";
+                card.dataset.status = entry.status;
+
+                let icon = "🔒";
+                if (entry.status === LEVEL_STATUS.COMPLETED) {
+                    icon = "✓";
+                } else if (entry.status === LEVEL_STATUS.IN_PROGRESS) {
+                    icon = "▸";
+                } else if (entry.status === LEVEL_STATUS.UNLOCKED) {
+                    icon = "○";
+                }
+
+                const solvedCount = (entry.solvedWordIds || []).length;
+                const totalWords = level.words.length;
+                const meta =
+                    entry.status === LEVEL_STATUS.COMPLETED
+                        ? "Tamamlandı"
+                        : entry.status === LEVEL_STATUS.IN_PROGRESS
+                          ? `${solvedCount} / ${totalWords} kelime`
+                          : entry.status === LEVEL_STATUS.LOCKED
+                            ? "Kilitli"
+                            : `${totalWords} kelime`;
+
+                const iconElement = document.createElement("span");
+                iconElement.className = "level-card-icon";
+                iconElement.setAttribute("aria-hidden", "true");
+                iconElement.textContent = icon;
+
+                const titleElement = document.createElement("span");
+                titleElement.className = "level-card-title";
+                titleElement.textContent = getLevelDisplayTitle(level);
+
+                const metaElement = document.createElement("span");
+                metaElement.className = "level-card-meta";
+                metaElement.textContent = meta;
+
+                card.append(iconElement, titleElement, metaElement);
+
+                if (entry.status !== LEVEL_STATUS.LOCKED) {
+                    card.addEventListener("click", () => startLevel(level.id));
+                } else {
+                    card.disabled = true;
+                }
+
+                categoryGrid.appendChild(card);
+            });
+
+            section.append(heading, categoryGrid);
+            levelsGrid.appendChild(section);
         });
     }
 
@@ -1018,15 +1068,8 @@
         }`;
         modalQuestion.textContent = placement.word.question;
         const answerLength = normalizeAnswer(placement.word.answer).length;
-        modalLength.replaceChildren();
-        modalLength.style.setProperty("--answer-length", answerLength);
+        modalLength.textContent = `${answerLength} harf`;
         modalLength.setAttribute("aria-label", `Cevap uzunluğu: ${answerLength} harf`);
-        for (let index = 0; index < answerLength; index += 1) {
-            const slot = document.createElement("span");
-            slot.className = "answer-slot";
-            slot.setAttribute("aria-hidden", "true");
-            modalLength.appendChild(slot);
-        }
         answerInput.value = "";
         answerInput.maxLength = answerLength;
         resultMessage.textContent = "";
@@ -1197,7 +1240,7 @@
         saveProgress();
         updateHomeStats();
 
-        completeTitle.textContent = `${getLevelById(currentLevelId).title} tamamlandı!`;
+        completeTitle.textContent = `${getLevelDisplayTitle(getLevelById(currentLevelId))} tamamlandı!`;
         completeStats.innerHTML = `
             <div class="stat-row"><span>Süre</span><strong>${formatTime(elapsed)}</strong></div>
             <div class="stat-row"><span>Çözülen kelime</span><strong>${placements.length}</strong></div>
@@ -1314,7 +1357,7 @@
         wrongAttempts = Object.assign({}, entry.wrongAttempts || {});
         solvedWords = new Set(entry.solvedWordIds || []);
         levelStartedAt = Date.now();
-        levelTitleEl.textContent = level.title;
+        levelTitleEl.textContent = getLevelDisplayTitle(level);
 
         let generated = null;
         const forceNew = options && options.forceNew;
@@ -1425,6 +1468,22 @@
         if (event.key === "Enter") {
             checkAnswer();
         }
+    });
+
+    answerInput.addEventListener("input", () => {
+        if (!currentWord) {
+            return;
+        }
+
+        const maxLength = normalizeAnswer(currentWord.word.answer).length;
+        const characters = Array.from(answerInput.value);
+        if (characters.length <= maxLength) {
+            return;
+        }
+
+        const cursorPosition = Math.min(answerInput.selectionStart ?? maxLength, maxLength);
+        answerInput.value = characters.slice(0, maxLength).join("");
+        answerInput.setSelectionRange(cursorPosition, cursorPosition);
     });
 
     answerModal.addEventListener("click", (event) => {

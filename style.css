@@ -238,6 +238,21 @@ input {
 
 .levels-grid {
     display: grid;
+    gap: 24px;
+}
+
+.level-category {
+    min-width: 0;
+}
+
+.level-category-title {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
+    font-size: 20px;
+}
+
+.level-category-grid {
+    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
 }
@@ -759,19 +774,14 @@ input {
 }
 
 .modal-length {
-    display: grid;
-    grid-template-columns: repeat(var(--answer-length), minmax(0, 1fr));
-    gap: 6px;
-    width: min(100%, 360px);
+    width: fit-content;
     margin: 4px 0 18px;
-}
-
-.answer-slot {
-    height: 38px;
-    border: 1px solid var(--border);
-    border-bottom: 3px solid var(--accent);
-    border-radius: 5px 5px 2px 2px;
-    background: #fff;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .modal-tools {
@@ -965,7 +975,7 @@ input {
         overflow: auto;
     }
 
-    .levels-grid {
+    .level-category-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
