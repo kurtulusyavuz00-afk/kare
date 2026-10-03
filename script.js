@@ -33,10 +33,6 @@
     const progressBar = document.getElementById("progressBar");
     const levelTitleEl = document.getElementById("levelTitle");
 
-    const cluePanelText = document.getElementById("cluePanelText");
-    const cluePanelMeta = document.getElementById("cluePanelMeta");
-    const cluePanel = document.getElementById("cluePanel");
-    const openAnswerButton = document.getElementById("openAnswerButton");
     const hintButton = document.getElementById("hintButton");
 
     const completeModal = document.getElementById("completeModal");
@@ -753,7 +749,13 @@
                       ? `${solvedCount} / ${totalWords}`
                       : entry.status === LEVEL_STATUS.LOCKED
                         ? "Kilitli"
-                        : level.difficulty;
+                        : ({
+                            easy: "Kolay",
+                            medium: "Orta",
+                            hard: "Zor",
+                            expert: "Uzman",
+                            master: "Usta"
+                        }[level.difficulty] || level.difficulty);
 
             card.innerHTML = `
                 <span class="level-card-icon">${icon}</span>
@@ -783,9 +785,6 @@
         if (!selectedCell) {
             selectedWordLabel.textContent = "Bir kelime seç";
             directionBadge.textContent = "—";
-            cluePanelText.textContent = "Bir açıklama veya hücre seçin";
-            cluePanelText.classList.remove("is-wrong", "is-solved");
-            cluePanelMeta.textContent = "";
             return;
         }
 
@@ -796,26 +795,9 @@
             return;
         }
 
-        const answerLen = normalizeAnswer(placement.word.answer).length;
-        const directionLabel =
-            placement.direction === "across" ? "Yatay" : "Dikey";
-        const isSolved = solvedWords.has(placement.word.id);
-        const hasWrong = Boolean(wrongAttempts[placement.word.id]);
-
-        selectedWordLabel.textContent = `${placement.number}. ${placement.word.question}`;
+        selectedWordLabel.textContent = `${placement.number}. kelime seçildi`;
         directionBadge.textContent =
             placement.direction === "across" ? "YATAY" : "DİKEY";
-
-        cluePanelText.textContent = isSolved
-            ? `✓ ${placement.word.question}`
-            : placement.word.question;
-        cluePanelText.classList.toggle("is-wrong", hasWrong && !isSolved);
-        cluePanelText.classList.toggle("is-solved", isSolved);
-        cluePanelMeta.textContent = `${directionLabel} · ${answerLen} harf${
-            hasWrong && !isSolved
-                ? ` · ${wrongAttempts[placement.word.id].count} yanlış deneme`
-                : ""
-        }`;
     }
 
     /* -----------------------------------------------------
@@ -1035,8 +1017,18 @@
             placement.direction === "across" ? "YATAY" : "DİKEY"
         }`;
         modalQuestion.textContent = placement.word.question;
-        modalLength.textContent = `${normalizeAnswer(placement.word.answer).length} harf`;
+        const answerLength = normalizeAnswer(placement.word.answer).length;
+        modalLength.replaceChildren();
+        modalLength.style.setProperty("--answer-length", answerLength);
+        modalLength.setAttribute("aria-label", `Cevap uzunluğu: ${answerLength} harf`);
+        for (let index = 0; index < answerLength; index += 1) {
+            const slot = document.createElement("span");
+            slot.className = "answer-slot";
+            slot.setAttribute("aria-hidden", "true");
+            modalLength.appendChild(slot);
+        }
         answerInput.value = "";
+        answerInput.maxLength = answerLength;
         resultMessage.textContent = "";
         resultMessage.className = "result-message";
         answerModal.classList.add("show");
@@ -1107,12 +1099,10 @@
     }
 
     function useHint() {
-        if (!selectedCell) {
+        if (!currentWord) {
             return;
         }
-        const placement = placements.find(
-            (item) => item.word.id === selectedCell.wordId
-        );
+        const placement = currentWord;
         if (!placement || solvedWords.has(placement.word.id)) {
             return;
         }
@@ -1120,7 +1110,6 @@
         const answer = normalizeAnswer(placement.word.answer);
         const firstLetter = answer[0];
         hintsUsed += 1;
-        openWord(placement.word.id);
         answerInput.value = firstLetter;
         resultMessage.textContent = `İpucu: ilk harf "${firstLetter}"`;
         resultMessage.className = "result-message is-hint";
@@ -1332,6 +1321,9 @@
 
         if (!forceNew && entry.placements && entry.placements.length) {
             generated = restorePlacements(level, entry.placements);
+            if (generated && generated.length !== level.words.length) {
+                generated = null;
+            }
             if (generated) {
                 const validation = validateCrossword(generated, gridSize);
                 if (!validation.valid) {
@@ -1371,12 +1363,12 @@
         grid = buildFinalGrid(placements, gridSize);
         applySolvedLetters();
 
-        if (entry.status !== LEVEL_STATUS.COMPLETED) {
-            entry.status =
-                solvedWords.size > 0
+        entry.status =
+            solvedWords.size === level.words.length
+                ? LEVEL_STATUS.COMPLETED
+                : solvedWords.size > 0
                     ? LEVEL_STATUS.IN_PROGRESS
                     : LEVEL_STATUS.UNLOCKED;
-        }
         persistLevelState();
 
         showScreen("game");
@@ -1438,12 +1430,6 @@
     answerModal.addEventListener("click", (event) => {
         if (event.target === answerModal && !answerBusy) {
             closeAnswerModal();
-        }
-    });
-
-    openAnswerButton.addEventListener("click", () => {
-        if (selectedCell && !solvedWords.has(selectedCell.wordId)) {
-            openWord(selectedCell.wordId);
         }
     });
 

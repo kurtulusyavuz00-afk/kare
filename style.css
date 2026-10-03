@@ -525,50 +525,6 @@ input {
 }
 
 /* =====================================================
-   CLUE PANEL
-===================================================== */
-
-.clue-panel {
-    padding: 16px 18px;
-}
-
-.clue-panel-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.clue-panel-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.clue-panel-text {
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.4;
-    transition: color 0.2s ease;
-}
-
-.clue-panel-text.is-wrong {
-    color: var(--danger);
-}
-
-.clue-panel-text.is-solved {
-    color: var(--success);
-}
-
-.clue-panel-meta {
-    margin-top: 6px;
-    font-size: 13px;
-    color: var(--muted);
-}
-
-/* =====================================================
    CLUES LIST
 ===================================================== */
 
@@ -803,9 +759,25 @@ input {
 }
 
 .modal-length {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: repeat(var(--answer-length), minmax(0, 1fr));
+    gap: 6px;
+    width: min(100%, 360px);
+    margin: 4px 0 18px;
+}
+
+.answer-slot {
+    height: 38px;
+    border: 1px solid var(--border);
+    border-bottom: 3px solid var(--accent);
+    border-radius: 5px 5px 2px 2px;
+    background: #fff;
+}
+
+.modal-tools {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 10px;
 }
 
 .answer-label {

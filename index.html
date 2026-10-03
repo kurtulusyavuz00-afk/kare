@@ -20,7 +20,7 @@
         <div class="home-brand">
             <div class="home-kicker">Gazete Bulmacası</div>
             <h1 class="home-title">CROSSWORD</h1>
-            <p class="home-subtitle">Türkçe × English</p>
+            <p class="home-subtitle">Türkçe × İngilizce</p>
         </div>
 
         <div class="home-actions">
@@ -73,7 +73,7 @@
                 <button id="backHomeFromGame" class="icon-button" type="button" aria-label="Ana sayfa">←</button>
                 <div>
                     <div id="levelTitle" class="app-title">Seviye 1</div>
-                    <div class="app-subtitle">Türkçe açıklama · İngilizce / Türkçe cevap</div>
+                    <div class="app-subtitle">Türkçe ipuçları · İngilizce / Türkçe cevap</div>
                 </div>
             </div>
 
@@ -102,18 +102,6 @@
                 </div>
             </section>
 
-            <section id="cluePanel" class="clue-panel">
-                <div class="clue-panel-top">
-                    <div class="section-label">SEÇİLİ AÇIKLAMA</div>
-                    <div class="clue-panel-actions">
-                        <button id="hintButton" class="ghost-button" type="button">İpucu</button>
-                        <button id="openAnswerButton" class="primary-button compact-button" type="button">Cevabı Gir</button>
-                    </div>
-                </div>
-                <div id="cluePanelText" class="clue-panel-text">Bir açıklama veya hücre seçin</div>
-                <div id="cluePanelMeta" class="clue-panel-meta"></div>
-            </section>
-
             <section class="clues-card">
                 <div class="clues-section">
                     <div class="clues-title"><span>Yatay</span></div>
@@ -134,9 +122,9 @@
     <div id="modalBox" class="modal-box">
         <button id="closeModal" class="close-button" aria-label="Kapat" type="button">×</button>
         <div id="modalNumber" class="modal-number"></div>
-        <div class="section-label modal-label">AÇIKLAMA</div>
+        <div class="section-label modal-label">TANIM</div>
         <div id="modalQuestion" class="modal-question"></div>
-        <div id="modalLength" class="modal-length"></div>
+        <div id="modalLength" class="modal-length" aria-label="Cevap uzunluğu"></div>
         <div class="answer-label">CEVAP</div>
         <input
             id="answerInput"
@@ -147,6 +135,9 @@
             enterkeyhint="done"
             placeholder="Cevabınızı yazın"
         >
+        <div class="modal-tools">
+            <button id="hintButton" class="ghost-button" type="button">İpucu</button>
+        </div>
         <div id="resultMessage" class="result-message"></div>
         <div class="modal-buttons">
             <button id="cancelButton" class="secondary-button" type="button">Kapat</button>
