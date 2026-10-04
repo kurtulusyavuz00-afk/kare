@@ -1494,6 +1494,7 @@
     }
 
     function showCompleteModal() {
+        replayMode = false;
         const elapsed = Date.now() - levelStartedAt;
         const levelEntry = progress.levels[currentLevelId];
         levelEntry.status = LEVEL_STATUS.COMPLETED;
@@ -1576,6 +1577,7 @@
     }
 
     function persistLevelState() {
+        if (replayMode) return;
         const entry = progress.levels[currentLevelId];
         if (!entry) {
             return;
