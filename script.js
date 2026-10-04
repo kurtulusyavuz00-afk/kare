@@ -133,23 +133,6 @@
         }
     }
 
-    function updateSoundToggle() {
-        if (!soundToggle || !soundToggleLabel) {
-            return;
-        }
-
-        const audioReady = audioContext && audioContext.state === "running";
-        const label = !soundEnabled
-            ? "Sesi aç"
-            : audioReady
-                ? "Sesi kapat"
-                : "Müziği başlat";
-        soundToggleLabel.textContent = label;
-        soundToggle.setAttribute("aria-label", label);
-        soundToggle.setAttribute("title", label);
-        soundToggle.setAttribute("aria-pressed", String(soundEnabled));
-    }
-
     function playTone(frequency, options) {
         if (!soundEnabled || !audioContext || audioContext.state !== "running") {
             return;
