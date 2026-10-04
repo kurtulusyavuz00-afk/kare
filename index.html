@@ -28,7 +28,7 @@
             </div>
             <div class="home-kicker"><span class="home-kicker-line"></span> Kelime bulmacası</div>
             <h1 class="home-title font-extrabold">KARE</h1>
-            <p class="home-subtitle">Türkçe tanımlarla kelimeleri keşfet.</p>
+            <p class="home-subtitle">Türkçe tanımlarla kelimeleri keşfet ve İngilizcene seviye atlat!</p>
         </div>
 
         <div class="home-actions">
@@ -77,6 +77,60 @@
 </section>
 
 
+<!-- ===================== SETTINGS ===================== -->
+<section id="settingsScreen" class="screen utility-screen">
+    <div class="screen-header">
+        <button id="backHomeFromSettings" class="icon-button" type="button" aria-label="Geri">←</button>
+        <div>
+            <div class="section-label">AYARLAR</div>
+            <h2 class="screen-heading">Oyun Ayarları</h2>
+        </div>
+    </div>
+    <div class="settings-card">
+        <label class="setting-row">
+            <span>
+                <strong>Sesleri aç</strong>
+                <small>Müzik ve oyun ses efektlerini kontrol eder.</small>
+            </span>
+            <input id="settingsSoundToggle" class="switch-input" type="checkbox">
+            <span class="switch-visual" aria-hidden="true"></span>
+        </label>
+        <label class="setting-row">
+            <span>
+                <strong>Tanımları açılabilir-kapanabilir yap</strong>
+                <small>Mobilde tanımlar panelini aşağıdan yukarı sürükleyerek açabilirsin.</small>
+            </span>
+            <input id="settingsCollapsibleClues" class="switch-input" type="checkbox">
+            <span class="switch-visual" aria-hidden="true"></span>
+        </label>
+        <div class="setting-note">Varsayılan olarak tanımlar sabit tutulur.</div>
+    </div>
+</section>
+
+<!-- ===================== DICTIONARY ===================== -->
+<section id="dictionaryScreen" class="screen utility-screen">
+    <div class="screen-header">
+        <button id="backHomeFromDictionary" class="icon-button" type="button" aria-label="Geri">←</button>
+        <div>
+            <div class="section-label">SÖZLÜK</div>
+            <h2 class="screen-heading">Çözdüğün Kelimeler</h2>
+        </div>
+    </div>
+    <div class="dictionary-toolbar">
+        <label>Seviye
+            <select id="dictionaryLevelFilter"><option value="all">Tüm seviyeler</option></select>
+        </label>
+        <label>Zorluk
+            <select id="dictionaryDifficultyFilter"><option value="all">Tüm zorluklar</option></select>
+        </label>
+        <label class="dictionary-search">Ara
+            <input id="dictionarySearch" type="search" placeholder="Kelime veya tanım ara">
+        </label>
+    </div>
+    <div id="dictionaryEmpty" class="dictionary-empty">Henüz çözdüğün bir kelime yok.</div>
+    <div id="dictionaryList" class="dictionary-list"></div>
+</section>
+
 <!-- ===================== GAME ===================== -->
 <section id="gameScreen" class="screen">
     <div class="app">
@@ -85,7 +139,7 @@
                 <button id="backHomeFromGame" class="icon-button" type="button" aria-label="Ana sayfa">←</button>
                 <div>
                     <div id="levelTitle" class="app-title">Seviye 1</div>
-                    <div class="app-subtitle">Türkçe tanımlar · Türkçe veya İngilizce cevaplar</div>
+                    <div class="app-subtitle">Türkçe tanımlar · İngilizce kelimeler</div>
                 </div>
             </div>
 
@@ -121,6 +175,20 @@
     </div>
 </section>
 
+
+<!-- ===================== COMPLETED LEVEL MODAL ===================== -->
+<div id="completedLevelModal" class="modal">
+    <div class="complete-box completed-choice-box">
+        <div class="complete-icon">✓</div>
+        <div class="complete-title">Bu seviye tamamlandı</div>
+        <div class="complete-text">İstersen cevapları tekrar görebilir veya bulmacayı sıfırdan çözebilirsin.</div>
+        <div class="complete-actions">
+            <button id="replayLevelButton" class="primary-button complete-button" type="button">Tekrar Oyna</button>
+            <button id="showAnswersButton" class="secondary-button complete-button" type="button">Cevapları Göster</button>
+            <button id="cancelCompletedLevelButton" class="ghost-button complete-button" type="button">Vazgeç</button>
+        </div>
+    </div>
+</div>
 
 <!-- ===================== ANSWER MODAL ===================== -->
 <div id="answerModal" class="modal">
