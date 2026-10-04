@@ -1065,7 +1065,7 @@
 
             const heading = document.createElement("h3");
             heading.className = "level-category-title";
-            heading.textContent = category.label;
+            heading.textContent = `${category.label} (${category.cefr})`;
 
             const categoryGrid = document.createElement("div");
             categoryGrid.className = "level-category-grid";
