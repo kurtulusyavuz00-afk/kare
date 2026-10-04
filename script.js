@@ -1774,6 +1774,18 @@
     document.getElementById("showAnswersButton").addEventListener("click", () => { const id=pendingCompletedLevelId; completedLevelModal.classList.remove("show"); pendingCompletedLevelId=null; if(id) startLevel(id,{showAnswers:true}); });
     document.getElementById("cancelCompletedLevelButton").addEventListener("click", () => { completedLevelModal.classList.remove("show"); pendingCompletedLevelId=null; });
     cluePanelHandle.addEventListener("click", () => { if(settings.collapsibleClues) cluesCard.classList.toggle("is-collapsed"); });
+    let clueDragStartY = null;
+    cluePanelHandle.addEventListener("pointerdown", event => {
+        if (!settings.collapsibleClues) return;
+        clueDragStartY = event.clientY;
+        cluePanelHandle.setPointerCapture?.(event.pointerId);
+    });
+    cluePanelHandle.addEventListener("pointerup", event => {
+        if (!settings.collapsibleClues || clueDragStartY === null) return;
+        const delta = event.clientY - clueDragStartY;
+        if (Math.abs(delta) > 24) cluesCard.classList.toggle("is-collapsed", delta > 0);
+        clueDragStartY = null;
+    });
     document.getElementById("startGameButton").addEventListener("click", continueFromHome);
     document.getElementById("openLevelsButton").addEventListener("click", () => {
         renderLevelsScreen();
