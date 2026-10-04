@@ -1725,22 +1725,10 @@
        EVENTS
     ----------------------------------------------------- */
 
-    soundToggle.addEventListener("click", () => {
-        if (soundEnabled && audioContext && audioContext.state === "running") {
-            setSoundEnabled(false);
-            return;
-        }
-        setSoundEnabled(true);
-        void unlockAudio();
-    });
-
     document.addEventListener(
         "pointerdown",
-        (event) => {
-            const target = event.target;
-            const clickedSoundControl =
-                target && typeof target.closest === "function" && target.closest("#soundToggle");
-            if (soundEnabled && !clickedSoundControl) {
+        () => {
+            if (soundEnabled) {
                 void unlockAudio();
             }
         },
