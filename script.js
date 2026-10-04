@@ -1045,7 +1045,7 @@
             (item) => getLevelCategoryKey(item) === categoryKey
         );
         const levelNumber = categoryLevels.findIndex((item) => item.id === level.id) + 1;
-        return `${category.label} Seviye ${levelNumber}`;
+        return `${category.label} (${category.cefr}) Seviye ${levelNumber}`;
     }
 
     function renderLevelsScreen() {
@@ -1087,7 +1087,7 @@
                 }
 
                 const solvedCount = (entry.solvedWordIds || []).length;
-                const totalWords = level.words.length;
+                const totalWords = getTargetWordCount(level);
                 const meta =
                     entry.status === LEVEL_STATUS.COMPLETED
                         ? "Tamamlandı"
@@ -1638,7 +1638,7 @@
 
         if (!forceNew && !replayMode && entry.placements && entry.placements.length) {
             generated = restorePlacements(level, entry.placements);
-            if (generated && generated.length !== level.words.length) {
+            if (generated && generated.length !== activeWords.length) {
                 generated = null;
             }
             if (generated) {
@@ -1653,7 +1653,7 @@
             // Birkaç deneme — kelime sırası shuffle ile
             const attempts = 8;
             for (let i = 0; i < attempts; i++) {
-                const words = level.words.map((word) => Object.assign({}, word));
+                const words = activeWords.map((word) => Object.assign({}, word));
                 if (i > 0) {
                     for (let j = words.length - 1; j > 0; j--) {
                         const k = Math.floor(Math.random() * (j + 1));
@@ -1663,7 +1663,7 @@
                     }
                 }
                 generated = generateCrossword(words, gridSize);
-                if (generated.length === level.words.length) {
+                if (generated.length === activeWords.length) {
                     break;
                 }
                 generated = null;
@@ -1681,7 +1681,7 @@
         applySolvedLetters();
 
         entry.status =
-            solvedWords.size === level.words.length
+            solvedWords.size === activeWords.length
                 ? LEVEL_STATUS.COMPLETED
                 : solvedWords.size > 0
                     ? LEVEL_STATUS.IN_PROGRESS
