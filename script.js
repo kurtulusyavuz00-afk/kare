@@ -1023,10 +1023,10 @@
     }
 
     const LEVEL_CATEGORIES = [
-        { key: "easy", label: "Kolay" },
-        { key: "medium", label: "Orta" },
-        { key: "hard", label: "Zor" },
-        { key: "expert", label: "Uzman" }
+        { key: "easy", label: "Kolay", cefr: "A1", wordCount: 4 },
+        { key: "medium", label: "Orta", cefr: "A2", wordCount: 5 },
+        { key: "hard", label: "Zor", cefr: "B1", wordCount: 6 },
+        { key: "expert", label: "Uzman", cefr: "B2", wordCount: 7 }
     ];
 
     function getLevelCategoryKey(level) {
@@ -1037,6 +1037,10 @@
             ? level.difficulty
             : "expert";
     }
+
+    function getTargetWordCount(level) { const category = LEVEL_CATEGORIES.find(item => item.key === getLevelCategoryKey(level)); return category ? category.wordCount : 7; }
+
+    function getPlayableWords(level) { return level.words.slice(0, Math.min(getTargetWordCount(level), level.words.length)); }
 
     function getLevelDisplayTitle(level) {
         const categoryKey = getLevelCategoryKey(level);
