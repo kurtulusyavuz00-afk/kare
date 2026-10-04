@@ -1674,6 +1674,30 @@
         completedLevelModal.classList.remove("show");
         closeAnswerModal();
     }
+    function saveSettings() { try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch (error) {} }
+    function applySettingsUI() {
+        document.body.classList.toggle("collapsible-clues-enabled", Boolean(settings.collapsibleClues));
+        cluesCard.classList.toggle("is-collapsed", Boolean(settings.collapsibleClues));
+        settingsSoundToggle.checked = soundEnabled;
+        settingsCollapsibleClues.checked = Boolean(settings.collapsibleClues);
+    }
+    function openSettings() { applySettingsUI(); showScreen("settings"); }
+    function getSolvedDictionaryWords() {
+        const rows = []; LEVELS.forEach(level => { const solved = new Set(progress.levels[level.id]?.solvedWordIds || []); level.words.forEach(word => { if (solved.has(word.id)) rows.push({word,level}); }); }); return rows;
+    }
+    function renderDictionary() {
+        const lv=dictionaryLevelFilter.value, diff=dictionaryDifficultyFilter.value, q=(dictionarySearch.value||"").trim().toLowerCase();
+        const rows=getSolvedDictionaryWords().filter(({word,level})=>(lv==="all"||String(level.id)===lv)&&(diff==="all"||getLevelCategoryKey(level)===diff)&&(!q||word.answer.toLowerCase().includes(q)||word.clue.toLowerCase().includes(q)));
+        dictionaryList.replaceChildren(); dictionaryEmpty.style.display=rows.length?"none":"block";
+        rows.forEach(({word,level})=>{const card=document.createElement("article");card.className="dictionary-card";const cat=LEVEL_CATEGORIES.find(c=>c.key===getLevelCategoryKey(level));card.innerHTML="<div class=\"dictionary-word\">"+word.answer+"</div><div class=\"dictionary-clue\">"+word.clue+"</div><div class=\"dictionary-meta\">"+getLevelDisplayTitle(level)+" · "+(cat?cat.label:"Uzman")+"</div>";dictionaryList.appendChild(card);});
+    }
+    function openDictionary() {
+        dictionaryLevelFilter.innerHTML="<option value=\"all\">Tüm seviyeler</option>";
+        LEVELS.forEach(level=>{const o=document.createElement("option");o.value=String(level.id);o.textContent=getLevelDisplayTitle(level);dictionaryLevelFilter.appendChild(o);});
+        dictionaryDifficultyFilter.innerHTML="<option value=\"all\">Tüm zorluklar</option>";
+        LEVEL_CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c.key;o.textContent=c.label;dictionaryDifficultyFilter.appendChild(o);});
+        renderDictionary(); showScreen("dictionary");
+    }
     function continueFromHome() {
         const target =
             progress.lastPlayedLevelId ||
