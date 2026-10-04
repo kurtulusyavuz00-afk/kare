@@ -987,6 +987,8 @@
         homeScreen.classList.toggle("active", screen === "home");
         levelsScreen.classList.toggle("active", screen === "levels");
         gameScreen.classList.toggle("active", screen === "game");
+        settingsScreen.classList.toggle("active", screen === "settings");
+        dictionaryScreen.classList.toggle("active", screen === "dictionary");
         if (screen === "home") {
             startHomeMusic();
         } else {
@@ -1611,17 +1613,18 @@
         selectedCell = null;
         currentWord = null;
         answerBusy = false;
-        hintsUsed = entry.hintsUsed || 0;
-        wrongTotal = entry.wrongTotal || 0;
-        wrongAttempts = Object.assign({}, entry.wrongAttempts || {});
-        solvedWords = new Set(entry.solvedWordIds || []);
+        hintsUsed = replayMode ? 0 : (entry.hintsUsed || 0);
+        wrongTotal = replayMode ? 0 : (entry.wrongTotal || 0);
+        wrongAttempts = replayMode ? {} : Object.assign({}, entry.wrongAttempts || {});
+        solvedWords = replayMode ? new Set() : new Set(entry.solvedWordIds || []);
         levelStartedAt = Date.now();
         levelTitleEl.textContent = getLevelDisplayTitle(level);
 
         let generated = null;
         const forceNew = options && options.forceNew;
+        replayMode = Boolean(options && options.replay);
 
-        if (!forceNew && entry.placements && entry.placements.length) {
+        if (!forceNew && !replayMode && entry.placements && entry.placements.length) {
             generated = restorePlacements(level, entry.placements);
             if (generated && generated.length !== level.words.length) {
                 generated = null;
