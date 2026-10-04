@@ -27,8 +27,6 @@
     const modalLength = document.getElementById("modalLength");
     const resultMessage = document.getElementById("resultMessage");
 
-    const selectedWordLabel = document.getElementById("selectedWordLabel");
-    const directionBadge = document.getElementById("directionBadge");
     const progressText = document.getElementById("progressText");
     const progressBar = document.getElementById("progressBar");
     const levelTitleEl = document.getElementById("levelTitle");
@@ -44,12 +42,16 @@
     const homeCompletedText = document.getElementById("homeCompletedText");
     const homeLastLevelText = document.getElementById("homeLastLevelText");
     const homeProgressFill = document.getElementById("homeProgressFill");
+    const homeProgressText = document.getElementById("homeProgressText");
+    const soundToggle = document.getElementById("soundToggle");
+    const soundToggleLabel = document.getElementById("soundToggleLabel");
 
     /* -----------------------------------------------------
        CONSTANTS / STORAGE
     ----------------------------------------------------- */
 
     const STORAGE_KEY = "kelimeBulmaca.progress.v1";
+    const SOUND_STORAGE_KEY = "kare.sound.enabled.v1";
     const LEVEL_STATUS = {
         LOCKED: "locked",
         UNLOCKED: "unlocked",
@@ -73,6 +75,278 @@
     let wrongTotal = 0;
     let levelStartedAt = 0;
     let answerBusy = false;
+    let soundEnabled = true;
+    try {
+        soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== "false";
+    } catch (error) {
+        soundEnabled = true;
+    }
+
+    let audioContext = null;
+    let masterGain = null;
+    let musicGain = null;
+    let homeMusicTimer = null;
+    let homeMusicRunning = false;
+    let audioUnlocked = false;
+
+    function getAudioContext() {
+        if (audioContext) {
+            return audioContext;
+        }
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+            return null;
+        }
+
+        try {
+            audioContext = new AudioContextClass();
+            masterGain = audioContext.createGain();
+            musicGain = audioContext.createGain();
+            masterGain.gain.value = soundEnabled ? 0.68 : 0;
+            musicGain.gain.value = 0;
+            musicGain.connect(masterGain);
+            masterGain.connect(audioContext.destination);
+            return audioContext;
+        } catch (error) {
+            audioContext = null;
+            masterGain = null;
+            musicGain = null;
+            return null;
+        }
+    }
+
+    function updateSoundToggle() {
+        if (!soundToggle || !soundToggleLabel) {
+            return;
+        }
+
+        const audioReady = audioContext && audioContext.state === "running";
+        const label = !soundEnabled
+            ? "Sesi aç"
+            : audioReady
+                ? "Sesi kapat"
+                : "Müziği başlat";
+        soundToggleLabel.textContent = label;
+        soundToggle.setAttribute("aria-label", label);
+        soundToggle.setAttribute("title", label);
+        soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+    }
+
+    function playTone(frequency, options) {
+        if (!soundEnabled || !audioContext || audioContext.state !== "running") {
+            return;
+        }
+
+        const settings = options || {};
+        const destination = settings.destination || masterGain;
+        const duration = settings.duration || 0.24;
+        const attack = settings.attack || 0.025;
+        const startAt = audioContext.currentTime + (settings.delay || 0);
+        const oscillator = audioContext.createOscillator();
+        const envelope = audioContext.createGain();
+        const peak = Math.max(settings.volume || 0.04, 0.0002);
+
+        oscillator.type = settings.waveform || "sine";
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        envelope.gain.setValueAtTime(0.0001, startAt);
+        envelope.gain.exponentialRampToValueAtTime(
+            peak,
+            startAt + Math.min(attack, duration * 0.45)
+        );
+        envelope.gain.exponentialRampToValueAtTime(
+            0.0001,
+            startAt + duration
+        );
+        oscillator.connect(envelope);
+        envelope.connect(destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + duration + 0.02);
+    }
+
+    function playHomeMusicPhrase() {
+        if (
+            !homeMusicRunning ||
+            !soundEnabled ||
+            !audioContext ||
+            audioContext.state !== "running"
+        ) {
+            return;
+        }
+
+        const chord = [174.61, 220, 261.63, 349.23];
+        chord.forEach((frequency, index) => {
+            playTone(frequency, {
+                destination: musicGain,
+                delay: index * 0.12,
+                duration: 7.7,
+                volume: 0.009,
+                attack: 1.1,
+                waveform: "sine"
+            });
+        });
+
+        const melody = [523.25, 392, 440, 659.25, 523.25, 349.23];
+        melody.forEach((frequency, index) => {
+            playTone(frequency, {
+                destination: musicGain,
+                delay: index * 1.35,
+                duration: 1.35,
+                volume: 0.014,
+                attack: 0.16,
+                waveform: "sine"
+            });
+        });
+    }
+
+    function startHomeMusic() {
+        if (!soundEnabled || !audioUnlocked || !homeScreen.classList.contains("active")) {
+            return;
+        }
+
+        const context = getAudioContext();
+        if (!context) {
+            updateSoundToggle();
+            return;
+        }
+
+        context.resume().then(() => {
+            if (
+                !soundEnabled ||
+                !homeScreen.classList.contains("active") ||
+                context.state !== "running"
+            ) {
+                updateSoundToggle();
+                return;
+            }
+            if (homeMusicRunning) {
+                updateSoundToggle();
+                return;
+            }
+
+            homeMusicRunning = true;
+            musicGain.gain.cancelScheduledValues(context.currentTime);
+            musicGain.gain.setTargetAtTime(0.7, context.currentTime, 0.6);
+            playHomeMusicPhrase();
+            homeMusicTimer = window.setInterval(playHomeMusicPhrase, 8200);
+            updateSoundToggle();
+        }).catch(() => {
+            updateSoundToggle();
+        });
+    }
+
+    function stopHomeMusic() {
+        homeMusicRunning = false;
+        if (homeMusicTimer !== null) {
+            window.clearInterval(homeMusicTimer);
+            homeMusicTimer = null;
+        }
+        if (audioContext && musicGain && audioContext.state === "running") {
+            musicGain.gain.cancelScheduledValues(audioContext.currentTime);
+            musicGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.08);
+        }
+    }
+
+    function unlockAudio() {
+        if (!soundEnabled) {
+            return Promise.resolve(null);
+        }
+
+        audioUnlocked = true;
+        const context = getAudioContext();
+        if (!context) {
+            updateSoundToggle();
+            return Promise.resolve(null);
+        }
+
+        return context.resume().then(() => {
+            updateSoundToggle();
+            if (context.state === "running" && homeScreen.classList.contains("active")) {
+                startHomeMusic();
+            }
+            return context;
+        }).catch(() => {
+            updateSoundToggle();
+            return null;
+        });
+    }
+
+    function playSoundEffect(kind) {
+        if (!soundEnabled) {
+            return;
+        }
+
+        const context = getAudioContext();
+        if (!context) {
+            return;
+        }
+        if (context.state !== "running") {
+            context.resume().then(() => {
+                if (soundEnabled && context.state === "running") {
+                    playSoundEffect(kind);
+                }
+            }).catch(() => {});
+            return;
+        }
+
+        const patterns = {
+            correct: [
+                [587.33, 0, 0.2],
+                [783.99, 0.1, 0.26]
+            ],
+            wrong: [
+                [293.66, 0, 0.2],
+                [246.94, 0.13, 0.23]
+            ],
+            hint: [
+                [659.25, 0, 0.24]
+            ],
+            complete: [
+                [523.25, 0, 0.28],
+                [659.25, 0.13, 0.28],
+                [783.99, 0.26, 0.32],
+                [1046.5, 0.43, 0.55]
+            ]
+        };
+
+        (patterns[kind] || []).forEach(([frequency, delay, duration]) => {
+            playTone(frequency, {
+                delay,
+                duration,
+                volume: kind === "wrong" ? 0.035 : 0.052,
+                attack: 0.018,
+                waveform: "sine"
+            });
+        });
+    }
+
+    function setSoundEnabled(enabled) {
+        soundEnabled = enabled;
+        try {
+            localStorage.setItem(SOUND_STORAGE_KEY, String(soundEnabled));
+        } catch (error) {
+            // Ses tercihi, depolama kullanılamasa da geçerli oturumda çalışır.
+        }
+
+        const context = getAudioContext();
+        if (!soundEnabled) {
+            stopHomeMusic();
+            if (context && masterGain && context.state === "running") {
+                masterGain.gain.setTargetAtTime(0, context.currentTime, 0.04);
+            }
+        } else if (context) {
+            context.resume().then(() => {
+                if (!soundEnabled || !masterGain) {
+                    return;
+                }
+                masterGain.gain.setTargetAtTime(0.68, context.currentTime, 0.04);
+                if (homeScreen.classList.contains("active")) {
+                    startHomeMusic();
+                }
+            }).catch(() => {});
+        }
+        updateSoundToggle();
+    }
 
     /* -----------------------------------------------------
        PROGRESS MANAGER
@@ -708,30 +982,41 @@
         homeScreen.classList.toggle("active", screen === "home");
         levelsScreen.classList.toggle("active", screen === "levels");
         gameScreen.classList.toggle("active", screen === "game");
+        if (screen === "home") {
+            startHomeMusic();
+        } else {
+            stopHomeMusic();
+        }
     }
 
     function updateHomeStats() {
         const completed = getCompletedCount();
         const total = getTotalLevelCount();
         homeCompletedText.textContent = `${completed} / ${total}`;
-        homeLastLevelText.textContent = progress.lastPlayedLevelId
-            ? String(progress.lastPlayedLevelId)
+        const lastLevel = getLevelById(progress.lastPlayedLevelId);
+        homeLastLevelText.textContent = lastLevel
+            ? getLevelDisplayTitle(lastLevel)
             : "—";
         const percent = total === 0 ? 0 : (completed / total) * 100;
         homeProgressFill.style.width = `${percent}%`;
+        homeProgressFill.setAttribute("aria-valuenow", String(Math.round(percent)));
+        homeProgressText.textContent = `${Math.round(percent)}%`;
     }
 
     const LEVEL_CATEGORIES = [
         { key: "easy", label: "Kolay" },
         { key: "medium", label: "Orta" },
-        { key: "hard", label: "Zor" }
+        { key: "hard", label: "Zor" },
+        { key: "expert", label: "Uzman" }
     ];
 
     function getLevelCategoryKey(level) {
-        if (level.difficulty === "easy" || level.difficulty === "medium") {
-            return level.difficulty;
+        if (level.difficulty === "master") {
+            return "expert";
         }
-        return "hard";
+        return LEVEL_CATEGORIES.some((category) => category.key === level.difficulty)
+            ? level.difficulty
+            : "expert";
     }
 
     function getLevelDisplayTitle(level) {
@@ -773,7 +1058,7 @@
                 card.className = "level-card";
                 card.dataset.status = entry.status;
 
-                let icon = "🔒";
+                let icon = "■";
                 if (entry.status === LEVEL_STATUS.COMPLETED) {
                     icon = "✓";
                 } else if (entry.status === LEVEL_STATUS.IN_PROGRESS) {
@@ -828,25 +1113,6 @@
         progressText.textContent = `${solved} / ${total}`;
         const percentage = total === 0 ? 0 : (solved / total) * 100;
         progressBar.style.width = `${percentage}%`;
-    }
-
-    function updateSelectedWordUI() {
-        if (!selectedCell) {
-            selectedWordLabel.textContent = "Bir kelime seç";
-            directionBadge.textContent = "—";
-            return;
-        }
-
-        const placement = placements.find(
-            (item) => item.word.id === selectedCell.wordId
-        );
-        if (!placement) {
-            return;
-        }
-
-        selectedWordLabel.textContent = `${placement.number}. kelime seçildi`;
-        directionBadge.textContent =
-            placement.direction === "across" ? "YATAY" : "DİKEY";
     }
 
     /* -----------------------------------------------------
@@ -1040,7 +1306,6 @@
         }
 
         selectedCell = { row, col, wordId };
-        updateSelectedWordUI();
         renderGrid();
         renderClues();
     }
@@ -1066,6 +1331,7 @@
         modalLength.setAttribute("aria-label", `Cevap uzunluğu: ${answerLength} harf`);
         answerInput.value = "";
         answerInput.maxLength = answerLength;
+        answerInput.setAttribute("maxlength", String(answerLength));
         resultMessage.textContent = "";
         resultMessage.className = "result-message";
         answerModal.classList.add("show");
@@ -1100,6 +1366,7 @@
             solvedWords.add(currentWord.word.id);
             resultMessage.textContent = "✓ Doğru cevap!";
             resultMessage.className = "result-message is-success";
+            playSoundEffect("correct");
             persistLevelState();
             revealWordAnimated(currentWord);
             return;
@@ -1116,11 +1383,11 @@
 
         resultMessage.textContent = "Yanlış cevap.";
         resultMessage.className = "result-message is-error";
+        playSoundEffect("wrong");
         modalBox.classList.remove("shake", "error-flash");
         void modalBox.offsetWidth;
         modalBox.classList.add("shake", "error-flash");
 
-        updateSelectedWordUI();
         renderClues();
         persistLevelState();
 
@@ -1142,6 +1409,7 @@
         answerInput.value = firstLetter;
         resultMessage.textContent = `İpucu: ilk harf "${firstLetter}"`;
         resultMessage.className = "result-message is-hint";
+        playSoundEffect("hint");
         persistLevelState();
     }
 
@@ -1173,7 +1441,6 @@
         });
 
         renderGrid();
-        updateSelectedWordUI();
         renderClues();
 
         cells.forEach((cell, index) => {
@@ -1243,6 +1510,7 @@
 
         completeModal.classList.add("show");
         completeModal.classList.add("celebrate");
+        playSoundEffect("complete");
     }
 
     /* -----------------------------------------------------
@@ -1404,7 +1672,6 @@
         renderGrid();
         renderClues();
         updateProgressUI();
-        updateSelectedWordUI();
         completeModal.classList.remove("show", "celebrate");
         closeAnswerModal();
     }
@@ -1425,6 +1692,28 @@
     /* -----------------------------------------------------
        EVENTS
     ----------------------------------------------------- */
+
+    soundToggle.addEventListener("click", () => {
+        if (soundEnabled && audioContext && audioContext.state === "running") {
+            setSoundEnabled(false);
+            return;
+        }
+        setSoundEnabled(true);
+        void unlockAudio();
+    });
+
+    document.addEventListener(
+        "pointerdown",
+        (event) => {
+            const target = event.target;
+            const clickedSoundControl =
+                target && typeof target.closest === "function" && target.closest("#soundToggle");
+            if (soundEnabled && !clickedSoundControl) {
+                void unlockAudio();
+            }
+        },
+        { once: true, capture: true }
+    );
 
     document.getElementById("startGameButton").addEventListener("click", continueFromHome);
     document.getElementById("openLevelsButton").addEventListener("click", () => {
@@ -1517,6 +1806,7 @@
         unlockLevel(1);
         saveProgress();
         updateHomeStats();
+        updateSoundToggle();
         showScreen("home");
     }
 

@@ -1,0 +1,152 @@
+.kare-current-preview {
+    --background: #f3f1eb;
+    --background-deep: #e8e4da;
+    --text: #1c1a16;
+    --muted: #6f6a60;
+    --border: #ddd6c8;
+    --primary: #1f2a24;
+    --accent: #b08d3c;
+    --font-display: "Libre Baskerville", Georgia, "Times New Roman", serif;
+    --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding: 24px;
+    color: var(--text);
+    font-family: var(--font-body);
+    background:
+        radial-gradient(circle at top left, rgba(176, 141, 60, 0.12), transparent 35%),
+        linear-gradient(180deg, var(--background) 0%, var(--background-deep) 100%);
+}
+
+.kare-current-preview .home-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg, rgba(31, 42, 36, 0.92), rgba(31, 42, 36, 0.75)),
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(255, 255, 255, 0.03) 28px);
+}
+
+.kare-current-preview .home-bg::after {
+    position: absolute;
+    inset: 12% 8%;
+    border: 1px solid rgba(176, 141, 60, 0.28);
+    border-radius: 24px;
+    content: "";
+}
+
+.kare-current-preview .home-content {
+    position: relative;
+    width: min(420px, 100%);
+    padding: 36px 28px;
+    color: #f7f3ea;
+    text-align: center;
+}
+
+.kare-current-preview .home-kicker {
+    margin-bottom: 14px;
+    color: rgba(246, 236, 211, 0.72);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.kare-current-preview .home-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(40px, 10vw, 56px);
+    letter-spacing: 0.04em;
+}
+
+.kare-current-preview .home-subtitle {
+    margin: 10px 0 0;
+    color: rgba(246, 236, 211, 0.78);
+    font-size: 16px;
+}
+
+.kare-current-preview .home-actions {
+    display: grid;
+    gap: 12px;
+    margin-top: 36px;
+}
+
+.kare-current-preview .home-cta {
+    width: 100%;
+    min-height: 52px;
+}
+
+.kare-current-preview button {
+    border-radius: 12px;
+    padding: 12px 18px;
+    font: 700 15px var(--font-body);
+    cursor: pointer;
+}
+
+.kare-current-preview .primary-button {
+    border: 1px solid #1f2a24;
+    color: #f8f5ef;
+    background: #1f2a24;
+}
+
+.kare-current-preview .secondary-button {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: inherit;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.kare-current-preview .home-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.kare-current-preview .home-stat {
+    padding: 14px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.kare-current-preview .home-stat-label {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(246, 236, 211, 0.65);
+    font-size: 12px;
+}
+
+.kare-current-preview .home-stat strong {
+    font-size: 18px;
+}
+
+.kare-current-preview .home-progress {
+    margin-top: 18px;
+}
+
+.kare-current-preview .home-progress-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.kare-current-preview .home-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+}
+
+@media (max-width: 480px) {
+    .kare-current-preview {
+        padding: 16px;
+    }
+
+    .kare-current-preview .home-content {
+        padding: 30px 20px;
+    }
+}
