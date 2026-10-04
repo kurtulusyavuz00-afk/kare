@@ -1626,17 +1626,25 @@
             return;
         }
         replayMode = Boolean(options && options.replay);
+        const showAnswersMode = Boolean(options && options.showAnswers);
         currentLevelId = levelId;
         gridSize = level.gridSize || 15;
         selectedCell = null; currentWord = null; answerBusy = false;
         hintsUsed = replayMode ? 0 : (entry.hintsUsed || 0);
         wrongTotal = replayMode ? 0 : (entry.wrongTotal || 0);
         wrongAttempts = replayMode ? {} : Object.assign({}, entry.wrongAttempts || {});
-        solvedWords = replayMode ? new Set() : new Set(entry.solvedWordIds || []);
+        solvedWords = replayMode
+            ? new Set()
+            : showAnswersMode
+                ? new Set(level.words.map(word => word.id))
+                : new Set(entry.solvedWordIds || []);
         levelStartedAt = Date.now();
         levelTitleEl.textContent = getLevelDisplayTitle(level);
         const forceNew = Boolean(options && options.forceNew);
-        const activeWords = (!replayMode && entry.placements && entry.placements.length) ? level.words : getPlayableWords(level);
+        const useSavedCompletedLayout = showAnswersMode && entry.status === LEVEL_STATUS.COMPLETED && entry.placements && entry.placements.length;
+        const activeWords = useSavedCompletedLayout
+            ? level.words
+            : getPlayableWords(level);
         let generated = null;
         if (!forceNew && !replayMode && entry.placements && entry.placements.length) {
             generated = restorePlacements(level, entry.placements);
