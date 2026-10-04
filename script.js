@@ -13,6 +13,8 @@
     const homeScreen = document.getElementById("homeScreen");
     const levelsScreen = document.getElementById("levelsScreen");
     const gameScreen = document.getElementById("gameScreen");
+    const settingsScreen = document.getElementById("settingsScreen");
+    const dictionaryScreen = document.getElementById("dictionaryScreen");
     const levelsGrid = document.getElementById("levelsGrid");
 
     const puzzleElement = document.getElementById("puzzle");
@@ -45,6 +47,7 @@
     const homeProgressText = document.getElementById("homeProgressText");
     const soundToggle = document.getElementById("soundToggle");
     const soundToggleLabel = document.getElementById("soundToggleLabel");
+    const completedLevelModal = document.getElementById("completedLevelModal");
 
     /* -----------------------------------------------------
        CONSTANTS / STORAGE
@@ -69,6 +72,8 @@
     let currentWord = null;
     let selectedCell = null;
     let currentLevelId = 1;
+    let pendingCompletedLevelId = null;
+    let replayMode = false;
     let solvedWords = new Set();
     let wrongAttempts = {}; // wordId -> { count, lastAnswer }
     let hintsUsed = 0;
