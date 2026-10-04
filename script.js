@@ -1611,116 +1611,64 @@
 
     function startLevel(levelId, options) {
         const level = getLevelById(levelId);
-        if (!level) {
-            return;
-        }
-
+        if (!level) return;
         const entry = progress.levels[levelId];
-        if (!entry || entry.status === LEVEL_STATUS.LOCKED) {
+        if (!entry || entry.status === LEVEL_STATUS.LOCKED) return;
+        if (entry.status === LEVEL_STATUS.COMPLETED && !(options && options.replay) && !(options && options.showAnswers)) {
+            pendingCompletedLevelId = levelId;
+            completedLevelModal.classList.add("show");
             return;
         }
-
+        replayMode = Boolean(options && options.replay);
         currentLevelId = levelId;
         gridSize = level.gridSize || 15;
-        selectedCell = null;
-        currentWord = null;
-        answerBusy = false;
+        selectedCell = null; currentWord = null; answerBusy = false;
         hintsUsed = replayMode ? 0 : (entry.hintsUsed || 0);
         wrongTotal = replayMode ? 0 : (entry.wrongTotal || 0);
         wrongAttempts = replayMode ? {} : Object.assign({}, entry.wrongAttempts || {});
         solvedWords = replayMode ? new Set() : new Set(entry.solvedWordIds || []);
         levelStartedAt = Date.now();
         levelTitleEl.textContent = getLevelDisplayTitle(level);
-
+        const forceNew = Boolean(options && options.forceNew);
+        const activeWords = (!replayMode && entry.placements && entry.placements.length) ? level.words : getPlayableWords(level);
         let generated = null;
-        const forceNew = options && options.forceNew;
-        replayMode = Boolean(options && options.replay);
-
         if (!forceNew && !replayMode && entry.placements && entry.placements.length) {
             generated = restorePlacements(level, entry.placements);
-            if (generated && generated.length !== activeWords.length) {
-                generated = null;
-            }
-            if (generated) {
-                const validation = validateCrossword(generated, gridSize);
-                if (!validation.valid) {
-                    generated = null;
-                }
-            }
+            if (generated && generated.length !== activeWords.length) generated = null;
+            if (generated && !validateCrossword(generated, gridSize).valid) generated = null;
         }
-
         if (!generated) {
-            // Birkaç deneme — kelime sırası shuffle ile
             const attempts = 8;
             for (let i = 0; i < attempts; i++) {
-                const words = activeWords.map((word) => Object.assign({}, word));
+                const words = activeWords.map(word => Object.assign({}, word));
                 if (i > 0) {
                     for (let j = words.length - 1; j > 0; j--) {
                         const k = Math.floor(Math.random() * (j + 1));
-                        const tmp = words[j];
-                        words[j] = words[k];
-                        words[k] = tmp;
+                        [words[j], words[k]] = [words[k], words[j]];
                     }
                 }
                 generated = generateCrossword(words, gridSize);
-                if (generated.length === activeWords.length) {
-                    break;
-                }
+                if (generated.length === activeWords.length) break;
                 generated = null;
             }
         }
-
         if (!generated || generated.length === 0) {
             alert("Bu seviye için bulmaca oluşturulamadı. Lütfen tekrar deneyin.");
             return;
         }
-
         placements = generated;
         assignNumbers(placements);
         grid = buildFinalGrid(placements, gridSize);
         applySolvedLetters();
-
-        entry.status =
-            solvedWords.size === activeWords.length
-                ? LEVEL_STATUS.COMPLETED
-                : solvedWords.size > 0
-                    ? LEVEL_STATUS.IN_PROGRESS
-                    : LEVEL_STATUS.UNLOCKED;
-        persistLevelState();
-
+        if (!replayMode) {
+            entry.status = solvedWords.size === activeWords.length ? LEVEL_STATUS.COMPLETED : solvedWords.size > 0 ? LEVEL_STATUS.IN_PROGRESS : LEVEL_STATUS.UNLOCKED;
+            persistLevelState();
+        }
         showScreen("game");
-        renderGrid();
-        renderClues();
-        updateProgressUI();
+        renderGrid(); renderClues(); updateProgressUI();
         completeModal.classList.remove("show", "celebrate");
+        completedLevelModal.classList.remove("show");
         closeAnswerModal();
-    }
-
-    function saveSettings() { try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch (error) {} }
-    function applySettingsUI() {
-        document.body.classList.toggle("collapsible-clues-enabled", Boolean(settings.collapsibleClues));
-        cluesCard.classList.toggle("is-collapsed", Boolean(settings.collapsibleClues));
-        settingsSoundToggle.checked = soundEnabled;
-        settingsCollapsibleClues.checked = Boolean(settings.collapsibleClues);
-    }
-    function openSettings() { applySettingsUI(); showScreen("settings"); }
-    function getSolvedDictionaryWords() {
-        const rows=[];
-        LEVELS.forEach(level=>{ const solved=new Set(progress.levels[level.id]?.solvedWordIds||[]); level.words.forEach(word=>{ if(solved.has(word.id)) rows.push({word,level}); }); });
-        return rows;
-    }
-    function renderDictionary() {
-        const lv=dictionaryLevelFilter.value, diff=dictionaryDifficultyFilter.value, q=(dictionarySearch.value||"").trim().toLowerCase();
-        const rows=getSolvedDictionaryWords().filter(({word,level})=>(lv==="all"||String(level.id)===lv)&&(diff==="all"||getLevelCategoryKey(level)===diff)&&(!q||word.answer.toLowerCase().includes(q)||word.clue.toLowerCase().includes(q)));
-        dictionaryList.replaceChildren(); dictionaryEmpty.style.display=rows.length?"none":"block";
-        rows.forEach(({word,level})=>{ const card=document.createElement("article"); card.className="dictionary-card"; const cat=LEVEL_CATEGORIES.find(c=>c.key===getLevelCategoryKey(level)); card.innerHTML="<div class=\"dictionary-word\">"+word.answer+"</div><div class=\"dictionary-clue\">"+word.clue+"</div><div class=\"dictionary-meta\">"+getLevelDisplayTitle(level)+" · "+(cat?cat.label:"Uzman")+"</div>"; dictionaryList.appendChild(card); });
-    }
-    function openDictionary() {
-        dictionaryLevelFilter.innerHTML="<option value=\"all\">Tüm seviyeler</option>";
-        LEVELS.forEach(level=>{const o=document.createElement("option");o.value=String(level.id);o.textContent=getLevelDisplayTitle(level);dictionaryLevelFilter.appendChild(o);});
-        dictionaryDifficultyFilter.innerHTML="<option value=\"all\">Tüm zorluklar</option>";
-        LEVEL_CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c.key;o.textContent=c.label;dictionaryDifficultyFilter.appendChild(o);});
-        renderDictionary(); showScreen("dictionary");
     }
     function continueFromHome() {
         const target =
