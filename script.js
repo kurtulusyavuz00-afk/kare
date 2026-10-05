@@ -1860,7 +1860,7 @@
         if (!level) return;
         const entry = progress.levels[levelId];
         if (!entry || entry.status === LEVEL_STATUS.LOCKED) return;
-        if (entry.status === LEVEL_STATUS.COMPLETED && !(options && options.replay) && !(options && options.showAnswers)) {
+        if (entry.status === LEVEL_STATUS.COMPLETED && !(options && options.replay) && !(options && options.showAnswers) && !(options && options.forceNew)) {
             pendingCompletedLevelId = levelId;
             completedLevelModal.classList.add("show");
             return;
