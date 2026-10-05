@@ -91,66 +91,215 @@
     let wrongTotal = 0;
     let levelStartedAt = 0;
     let answerBusy = false;
-    function loadLearningStats() {
-        const defaults = { totalCorrect: 0, totalWrong: 0, totalHints: 0, totalWordsSolved: 0, uniqueWords: [], totalPlayTimeMs: 0, puzzlesCompleted: 0, currentStreak: 0, bestStreak: 0, timeAttackBestScore: 0 };
-        try { return Object.assign(defaults, JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || "{}")); } catch (error) { return defaults; }
+    let gameMode = "normal";
+    let statsViewMode = "normal";
+    let lives = 3;
+    let timeAttackRemainingMs = 90000;
+    let timeAttackInterval = null;
+    let timeAttackScore = 0;
+    let timeAttackWords = 0;
+    let answerStreak = 0;
+    let bestAnswerStreak = 0;
+
+    function makeModeStats() {
+        return {
+            totalCorrect: 0,
+            totalWrong: 0,
+            totalHints: 0,
+            totalWordsSolved: 0,
+            uniqueWords: [],
+            totalPlayTimeMs: 0,
+            puzzlesCompleted: 0,
+            currentStreak: 0,
+            bestStreak: 0,
+            timeAttackBestScore: 0
+        };
     }
-    function saveLearningStats() { try { localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats)); } catch (error) {} }
+
+    function loadLearningStats() {
+        const defaults = { normal: makeModeStats(), timeAttack: makeModeStats(), extreme: makeModeStats() };
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || "{}");
+            if (parsed.normal || parsed.timeAttack || parsed.extreme) {
+                return {
+                    normal: Object.assign(defaults.normal, parsed.normal || {}),
+                    timeAttack: Object.assign(defaults.timeAttack, parsed.timeAttack || {}),
+                    extreme: Object.assign(defaults.extreme, parsed.extreme || {})
+                };
+            }
+            defaults.normal = Object.assign(defaults.normal, parsed);
+            return defaults;
+        } catch (error) {
+            return defaults;
+        }
+    }
+
+    let statsStore = loadLearningStats();
+    let stats = statsStore.normal;
+
+    function saveLearningStats() {
+        try { localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(statsStore)); } catch (error) {}
+    }
+
+    function getModeLabel(mode) {
+        return mode === "timeAttack" ? "Time Attack" : mode === "extreme" ? "Extreme Mod" : "Normal Mod";
+    }
+
+    function activateMode(mode) {
+        if (!["normal", "timeAttack", "extreme"].includes(mode)) mode = "normal";
+        if (typeof progressStore !== "undefined" && progress) {
+            progressStore[gameMode] = progress;
+            saveProgress();
+        }
+        gameMode = mode;
+        stats = statsStore[mode];
+        setActiveMode(mode);
+        if (typeof progressStore !== "undefined") {
+            progress = progressStore[mode];
+        }
+        answerStreak = stats.currentStreak || 0;
+        bestAnswerStreak = stats.bestStreak || 0;
+        if (gameMode !== "timeAttack") stopTimeAttackTimer();
+        updateStatsUI();
+    }
+
+    function updateStatsUI() {
+        const viewed = statsStore[statsViewMode] || makeModeStats();
+        const streakEl = document.getElementById("homeStreakText");
+        const learnedEl = document.getElementById("homeWordsText");
+        if (streakEl) streakEl.textContent = String(statsStore[gameMode].currentStreak || 0);
+        if (learnedEl) learnedEl.textContent = String((statsStore[gameMode].uniqueWords || []).length);
+
+        const set=(id,value)=>{const el=document.getElementById(id); if(el) el.textContent=value;};
+        const totalAnswers=viewed.totalCorrect+viewed.totalWrong;
+        set("statsModeLabel", getModeLabel(statsViewMode));
+        set("statsLearnedWords", viewed.uniqueWords.length);
+        set("statsCorrect", viewed.totalCorrect);
+        set("statsWrong", viewed.totalWrong);
+        set("statsAccuracy", totalAnswers ? Math.round(viewed.totalCorrect/totalAnswers*100) + "%" : "—");
+        set("statsBestStreak", String(viewed.bestStreak || 0));
+        set("statsHints", viewed.totalHints);
+        set("statsPuzzles", viewed.puzzlesCompleted);
+        set("statsTimeAttack", viewed.timeAttackBestScore || 0);
+        set("statsLives", statsViewMode === "extreme" ? "3 can / bulmaca" : "—");
+    }
+
+    function selectStatsMode(mode) {
+        statsViewMode = mode;
+        document.querySelectorAll("[data-stats-mode]").forEach(button => {
+            button.classList.toggle("is-active", button.dataset.statsMode === mode);
+        });
+        updateStatsUI();
+    }
+
     function recordCorrectWord(wordId) {
         stats.totalCorrect += 1;
-        if (!stats.uniqueWords.includes(wordId)) { stats.uniqueWords.push(wordId); stats.totalWordsSolved = stats.uniqueWords.length; }
-        answerStreak += 1; bestAnswerStreak = Math.max(bestAnswerStreak, answerStreak);
-        stats.currentStreak = answerStreak; stats.bestStreak = Math.max(stats.bestStreak, bestAnswerStreak);
-        saveLearningStats(); updateStatsUI();
+        if (!stats.uniqueWords.includes(wordId)) {
+            stats.uniqueWords.push(wordId);
+            stats.totalWordsSolved = stats.uniqueWords.length;
+        }
+        answerStreak += 1;
+        bestAnswerStreak = Math.max(bestAnswerStreak, answerStreak);
+        stats.currentStreak = answerStreak;
+        stats.bestStreak = Math.max(stats.bestStreak, bestAnswerStreak);
+        saveLearningStats();
+        updateStatsUI();
     }
-    function recordWrongWord() { stats.totalWrong += 1; answerStreak = 0; stats.currentStreak = 0; saveLearningStats(); updateStatsUI(); }
-    function recordHintUsed() { stats.totalHints += 1; saveLearningStats(); }
-    function updateStatsUI() {
-        const streakEl=document.getElementById("homeStreakText"), learnedEl=document.getElementById("homeWordsText");
-        if (streakEl) streakEl.textContent = "🔥 " + answerStreak;
-        if (learnedEl) learnedEl.textContent = String(stats.uniqueWords.length);
-        const set=(id,value)=>{const el=document.getElementById(id); if(el) el.textContent=value;};
-        const totalAnswers=stats.totalCorrect+stats.totalWrong;
-        set("statsLearnedWords", stats.uniqueWords.length); set("statsCorrect", stats.totalCorrect); set("statsWrong", stats.totalWrong);
-        set("statsAccuracy", totalAnswers ? Math.round(stats.totalCorrect/totalAnswers*100) + "%" : "—");
-        set("statsBestStreak", "🔥 " + Math.max(stats.bestStreak,bestAnswerStreak)); set("statsHints", stats.totalHints);
-        set("statsPuzzles", stats.puzzlesCompleted); set("statsTimeAttack", stats.timeAttackBestScore || 0);
+
+    function recordWrongWord() {
+        stats.totalWrong += 1;
+        answerStreak = 0;
+        stats.currentStreak = 0;
+        saveLearningStats();
+        updateStatsUI();
     }
-    function stopTimeAttackTimer() { if (timeAttackInterval !== null) { window.clearInterval(timeAttackInterval); timeAttackInterval = null; } }
+
+    function recordHintUsed() {
+        stats.totalHints += 1;
+        saveLearningStats();
+    }
+
+    function stopTimeAttackTimer() {
+        if (timeAttackInterval !== null) {
+            window.clearInterval(timeAttackInterval);
+            timeAttackInterval = null;
+        }
+    }
+
     function updateTimeAttackUI() {
-        const timer=document.getElementById("timeAttackTimer"), score=document.getElementById("timeAttackScore");
+        const timer=document.getElementById("timeAttackTimer");
+        const score=document.getElementById("timeAttackScore");
         if (timer) timer.textContent = formatTime(Math.max(0,timeAttackRemainingMs));
         if (score) score.textContent = String(timeAttackScore);
-        const wrap=document.getElementById("timeAttackHud"); if (wrap) wrap.classList.toggle("is-danger", timeAttackRemainingMs <= 15000);
+        const wrap=document.getElementById("timeAttackHud");
+        if (wrap) wrap.classList.toggle("is-danger", timeAttackRemainingMs <= 15000);
     }
+
+    function updateExtremeUI() {
+        const hud=document.getElementById("extremeHud");
+        const value=document.getElementById("extremeLives");
+        if (hud) hud.hidden = gameMode !== "extreme";
+        if (value) value.textContent = String(lives);
+        if (hintButton) {
+            hintButton.disabled = gameMode === "extreme" && lives <= 0;
+            hintButton.title = hintButton.disabled ? "Canın kalmadığı için ipucu kullanamazsın." : "";
+        }
+    }
+
     function startTimeAttackTimer() {
         stopTimeAttackTimer();
         timeAttackInterval = window.setInterval(() => {
             timeAttackRemainingMs -= 100;
-            if (timeAttackRemainingMs <= 0) { timeAttackRemainingMs = 0; updateTimeAttackUI(); stopTimeAttackTimer(); showTimeAttackEndModal(false); return; }
+            if (timeAttackRemainingMs <= 0) {
+                timeAttackRemainingMs = 0;
+                updateTimeAttackUI();
+                stopTimeAttackTimer();
+                showTimeAttackEndModal(false);
+                return;
+            }
             updateTimeAttackUI();
         }, 100);
         updateTimeAttackUI();
     }
+
     function showTimeAttackEndModal(completed) {
         stopTimeAttackTimer();
-        const modal=document.getElementById("timeAttackModal"), title=document.getElementById("timeAttackEndTitle"), textEl=document.getElementById("timeAttackEndText"), scoreEl=document.getElementById("timeAttackEndScore");
+        const modal=document.getElementById("timeAttackModal");
+        const title=document.getElementById("timeAttackEndTitle");
+        const textEl=document.getElementById("timeAttackEndText");
+        const scoreEl=document.getElementById("timeAttackEndScore");
         if (!modal) return;
-        title.textContent = completed ? "Tur tamamlandı!" : "Süre doldu!";
-        textEl.textContent = completed ? "Bulmacayı süre bitmeden tamamladın." : "Zaman bitti. Bir sonraki turda daha yüksek skor dene.";
+        title.textContent = completed ? "Tur tamamlandı" : "Süre doldu";
+        textEl.textContent = completed ? "Bulmacayı süre bitmeden tamamladın." : "Zaman bitti. Yeni bir tur deneyebilirsin.";
         scoreEl.innerHTML = "<strong>" + timeAttackScore + "</strong> puan · " + timeAttackWords + " kelime";
-        if (timeAttackScore > (stats.timeAttackBestScore || 0)) { stats.timeAttackBestScore = timeAttackScore; saveLearningStats(); }
-        updateStatsUI(); modal.classList.add("show"); playSoundEffect(completed ? "complete" : "wrong");
+        if (timeAttackScore > (stats.timeAttackBestScore || 0)) {
+            stats.timeAttackBestScore = timeAttackScore;
+            saveLearningStats();
+        }
+        updateStatsUI();
+        modal.classList.add("show");
+        playSoundEffect(completed ? "complete" : "wrong");
     }
+
     function beginTimeAttackRound() {
-        const unlocked=LEVELS.filter(level => progress.levels[level.id] && progress.levels[level.id].status !== LEVEL_STATUS.LOCKED);
+        activateMode("timeAttack");
+        const levels = getActiveLevels();
+        const unlocked = levels.filter(level => progress.levels[level.id] && progress.levels[level.id].status !== LEVEL_STATUS.LOCKED);
         if (!unlocked.length) return;
-        const level=unlocked[Math.floor(Math.random()*unlocked.length)];
-        gameMode="timeAttack"; timeAttackRemainingMs=90000; timeAttackScore=0; timeAttackWords=0;
+        const level = unlocked[Math.floor(Math.random() * unlocked.length)];
+        timeAttackRemainingMs=90000;
+        timeAttackScore=0;
+        timeAttackWords=0;
         startLevel(level.id,{forceNew:true,timeAttack:true});
     }
 
-    let stats = loadLearningStats();
+    function beginModeRound(mode) {
+        activateMode(mode);
+        const levels = getActiveLevels();
+        const target = levels.find(level => progress.levels[level.id].status !== LEVEL_STATUS.LOCKED) || levels[0];
+        if (target) startLevel(target.id, {forceNew:true});
+    }
+
     let soundEnabled = true;
     let settings = { collapsibleClues: false };
     try { settings = Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}")); } catch (error) {}
@@ -166,13 +315,6 @@
     let homeMusicTimer = null;
     let homeMusicRunning = false;
     let audioUnlocked = false;
-    let gameMode = "normal";
-    let timeAttackRemainingMs = 90000;
-    let timeAttackInterval = null;
-    let timeAttackScore = 0;
-    let timeAttackWords = 0;
-    let answerStreak = 0;
-    let bestAnswerStreak = 0;
 
     function getAudioContext() {
         if (audioContext) {
@@ -422,7 +564,7 @@
 
     function createDefaultProgress() {
         const levels = {};
-        LEVELS.forEach((level, index) => {
+        getActiveLevels().forEach((level, index) => {
             levels[level.id] = {
                 status: index === 0 ? LEVEL_STATUS.UNLOCKED : LEVEL_STATUS.LOCKED,
                 solvedWordIds: [],
@@ -434,59 +576,86 @@
                 lastPlayedAt: null
             };
         });
-        return {
-            currentLevelId: 1,
-            lastPlayedLevelId: null,
-            levels
-        };
+        return { currentLevelId: getActiveLevels()[0]?.id || 1, lastPlayedLevelId: null, levels };
     }
 
-    function loadProgress() {
+    function mergeProgress(base, parsed) {
+        if (!parsed) return base;
+        base.currentLevelId = parsed.currentLevelId || base.currentLevelId;
+        base.lastPlayedLevelId = parsed.lastPlayedLevelId || null;
+        Object.keys(base.levels).forEach((id) => {
+            if (parsed.levels && parsed.levels[id]) {
+                base.levels[id] = Object.assign(base.levels[id], parsed.levels[id]);
+            }
+        });
+        return base;
+    }
+
+    function loadProgressStore() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) {
-                return createDefaultProgress();
+                const store = {};
+                ["normal","timeAttack","extreme"].forEach(mode => {
+                    setActiveMode(mode);
+                    store[mode] = createDefaultProgress();
+                });
+                setActiveMode("normal");
+                return store;
             }
             const parsed = JSON.parse(raw);
-            const base = createDefaultProgress();
-            base.currentLevelId = parsed.currentLevelId || 1;
-            base.lastPlayedLevelId = parsed.lastPlayedLevelId || null;
-            Object.keys(base.levels).forEach((id) => {
-                if (parsed.levels && parsed.levels[id]) {
-                    base.levels[id] = Object.assign(base.levels[id], parsed.levels[id]);
-                }
-            });
-            return base;
+            const store = {};
+            if (parsed.modes) {
+                ["normal","timeAttack","extreme"].forEach(mode => {
+                    setActiveMode(mode);
+                    store[mode] = mergeProgress(createDefaultProgress(), parsed.modes[mode]);
+                });
+            } else {
+                setActiveMode("normal");
+                store.normal = mergeProgress(createDefaultProgress(), parsed);
+                ["timeAttack","extreme"].forEach(mode => {
+                    setActiveMode(mode);
+                    store[mode] = createDefaultProgress();
+                });
+            }
+            setActiveMode("normal");
+            return store;
         } catch (error) {
-            console.warn("Progress load failed", error);
-            return createDefaultProgress();
+            const store = {};
+            ["normal","timeAttack","extreme"].forEach(mode => {
+                setActiveMode(mode);
+                store[mode] = createDefaultProgress();
+            });
+            setActiveMode("normal");
+            return store;
         }
     }
 
-    let progress = loadProgress();
+    let progressStore = loadProgressStore();
+    let progress = progressStore.normal;
 
     function saveProgress() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+            progressStore[gameMode] = progress;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, modes: progressStore }));
         } catch (error) {
             console.warn("Progress save failed", error);
         }
     }
 
     function getCompletedCount() {
-        return Object.values(progress.levels).filter(
-            (item) => item.status === LEVEL_STATUS.COMPLETED
-        ).length;
+        return Object.values(progress.levels).filter(item => item.status === LEVEL_STATUS.COMPLETED).length;
     }
 
     function unlockLevel(levelId) {
         const entry = progress.levels[levelId];
-        if (!entry) {
-            return;
-        }
-        if (entry.status === LEVEL_STATUS.LOCKED) {
-            entry.status = LEVEL_STATUS.UNLOCKED;
-        }
+        if (entry && entry.status === LEVEL_STATUS.LOCKED) entry.status = LEVEL_STATUS.UNLOCKED;
+    }
+
+    function getNextLevelId() {
+        const levels = getActiveLevels();
+        const index = levels.findIndex(level => level.id === currentLevelId);
+        return index >= 0 && index + 1 < levels.length ? levels[index + 1].id : null;
     }
 
     /* -----------------------------------------------------
@@ -1099,7 +1268,7 @@
     function getLevelDisplayTitle(level) {
         const categoryKey = getLevelCategoryKey(level);
         const category = LEVEL_CATEGORIES.find((item) => item.key === categoryKey);
-        const categoryLevels = LEVELS.filter(
+        const categoryLevels = getActiveLevels().filter(
             (item) => getLevelCategoryKey(item) === categoryKey
         );
         const levelNumber = categoryLevels.findIndex((item) => item.id === level.id) + 1;
@@ -1110,7 +1279,7 @@
         levelsGrid.replaceChildren();
 
         LEVEL_CATEGORIES.forEach((category) => {
-            const categoryLevels = LEVELS.filter(
+            const categoryLevels = getActiveLevels().filter(
                 (level) => getLevelCategoryKey(level) === category.key
             );
             if (categoryLevels.length === 0) {
@@ -1443,6 +1612,7 @@
             solvedWords.add(currentWord.word.id);
             recordCorrectWord(currentWord.word.id);
             if (gameMode === "timeAttack") { timeAttackWords += 1; timeAttackRemainingMs = Math.min(120000, timeAttackRemainingMs + 10000); timeAttackScore += 100 + (normalizeAnswer(currentWord.word.answer).length * 20) + (answerStreak * 10); updateTimeAttackUI(); }
+            if (gameMode === "extreme") updateExtremeUI();
             resultMessage.textContent = "✓ Doğru cevap!";
             resultMessage.className = "result-message is-success";
             playSoundEffect("correct");
@@ -1460,6 +1630,7 @@
         wrongAttempts[wordId].lastAnswer = userAnswer;
         wrongTotal += 1;
         recordWrongWord();
+        if (gameMode === "extreme") { lives = Math.max(0, lives - 1); updateExtremeUI(); }
         if (gameMode === "timeAttack") { timeAttackRemainingMs = Math.max(0, timeAttackRemainingMs - 3000); timeAttackScore = Math.max(0, timeAttackScore - 25); updateTimeAttackUI(); if (timeAttackRemainingMs === 0) { showTimeAttackEndModal(false); return; } }
 
         resultMessage.textContent = "Yanlış cevap.";
@@ -1477,6 +1648,11 @@
 
     function useHint() {
         if (!currentWord) {
+            return;
+        }
+        if (gameMode === "extreme" && lives <= 0) {
+            resultMessage.textContent = "Canın kalmadığı için ipucu kullanamazsın.";
+            resultMessage.className = "result-message is-error";
             return;
         }
         const placement = currentWord;
@@ -1570,8 +1746,8 @@
             levelEntry.bestTimeMs = elapsed;
         }
 
-        const nextId = currentLevelId + 1;
-        if (getLevelById(nextId)) {
+        const nextId = getNextLevelId();
+        if (nextId !== null) {
             unlockLevel(nextId);
         }
         saveProgress();
@@ -1583,13 +1759,13 @@
 
         completeTitle.textContent = `${getLevelDisplayTitle(getLevelById(currentLevelId))} tamamlandı!`;
         completeStats.innerHTML = `
-            <div class="stat-row"><span>Süre</span><strong>${formatTime(elapsed)}</strong></div>
+            <div class="stat-row"><span>Mod</span><strong>${getModeLabel(gameMode)}</strong></div>
             <div class="stat-row"><span>Çözülen kelime</span><strong>${placements.length}</strong></div>
             <div class="stat-row"><span>Yanlış cevap</span><strong>${wrongTotal}</strong></div>
             <div class="stat-row"><span>İpucu</span><strong>${hintsUsed}</strong></div>
         `;
 
-        if (getLevelById(nextId)) {
+        if (nextId !== null) {
             nextLevelButton.style.display = "";
             nextLevelButton.textContent = "Sonraki Seviye";
         } else {
@@ -1690,7 +1866,9 @@
             return;
         }
         replayMode = Boolean(options && options.replay);
-        if (options && options.timeAttack) { gameMode="timeAttack"; timeAttackRemainingMs=90000; } else if (!(options && options.keepMode)) { gameMode="normal"; }
+        if (options && options.mode) activateMode(options.mode);
+        if (options && options.timeAttack) { gameMode="timeAttack"; timeAttackRemainingMs=90000; }
+        lives = gameMode === "extreme" ? 3 : 3;
         const showAnswersMode = Boolean(options && options.showAnswers);
         currentLevelId = levelId;
         gridSize = level.gridSize || 15;
@@ -1747,6 +1925,7 @@
         renderGrid(); renderClues(); updateProgressUI();
         const hud=document.getElementById("timeAttackHud"); if(hud){hud.hidden=gameMode!=="timeAttack"; updateTimeAttackUI();}
         if(gameMode==="timeAttack") startTimeAttackTimer(); else stopTimeAttackTimer();
+        updateExtremeUI();
         completeModal.classList.remove("show", "celebrate");
         completedLevelModal.classList.remove("show");
         closeAnswerModal();
@@ -1777,7 +1956,7 @@
     }
     function openSettings() { applySettingsUI(); showScreen("settings"); }
     function getSolvedDictionaryWords() {
-        const rows = []; LEVELS.forEach(level => { const solved = new Set(progress.levels[level.id]?.solvedWordIds || []); level.words.forEach(word => { if (solved.has(word.id)) rows.push({word,level}); }); }); return rows;
+        const rows = []; getActiveLevels().forEach(level => { const solved = new Set(progress.levels[level.id]?.solvedWordIds || []); level.words.forEach(word => { if (solved.has(word.id)) rows.push({word,level}); }); }); return rows;
     }
     function renderDictionary() {
         const lv=dictionaryLevelFilter.value, diff=dictionaryDifficultyFilter.value, q=(dictionarySearch.value||"").trim().toLowerCase();
@@ -1787,22 +1966,25 @@
     }
     function openDictionary() {
         dictionaryLevelFilter.innerHTML="<option value=\"all\">Tüm seviyeler</option>";
-        LEVELS.forEach(level=>{const o=document.createElement("option");o.value=String(level.id);o.textContent=getLevelDisplayTitle(level);dictionaryLevelFilter.appendChild(o);});
+        getActiveLevels().forEach(level=>{const o=document.createElement("option");o.value=String(level.id);o.textContent=getLevelDisplayTitle(level);dictionaryLevelFilter.appendChild(o);});
         dictionaryDifficultyFilter.innerHTML="<option value=\"all\">Tüm zorluklar</option>";
         LEVEL_CATEGORIES.forEach(c=>{const o=document.createElement("option");o.value=c.key;o.textContent=c.label;dictionaryDifficultyFilter.appendChild(o);});
         renderDictionary(); showScreen("dictionary");
     }
     function continueFromHome() {
-        const target =
-            progress.lastPlayedLevelId ||
-            progress.currentLevelId ||
-            1;
+        activateMode(gameMode);
+        const levels = getActiveLevels();
+        const target = progress.lastPlayedLevelId || progress.currentLevelId || levels[0]?.id;
         const entry = progress.levels[target];
         if (entry && entry.status !== LEVEL_STATUS.LOCKED) {
             startLevel(target);
             return;
         }
-        startLevel(1);
+        if (levels[0]) startLevel(levels[0].id);
+    }
+
+    function openModeSelector() {
+        document.getElementById("modeSelectorModal")?.classList.add("show");
     }
 
     /* -----------------------------------------------------
@@ -1819,8 +2001,8 @@
         { once: true, capture: true }
     );
 
-    document.getElementById("openTimeAttackButton")?.addEventListener("click", beginTimeAttackRound);
-    document.getElementById("openStatsButton")?.addEventListener("click", () => { updateStatsUI(); showScreen("stats"); });
+    document.getElementById("openTimeAttackButton")?.addEventListener("click", () => openModeSelector());
+    document.getElementById("openStatsButton")?.addEventListener("click", () => { selectStatsMode(gameMode); showScreen("stats"); });
     document.getElementById("backHomeFromStats")?.addEventListener("click", () => showScreen("home"));
     document.getElementById("timeAttackNewRoundButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); beginTimeAttackRound(); });
     document.getElementById("timeAttackExitButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); gameMode="normal"; showScreen("home"); });
@@ -1870,7 +2052,10 @@
         setCluesSheetOpen(!cluesCard.classList.contains("is-sheet-open"));
     });
     cluesSheetBackdrop.addEventListener("click", () => setCluesSheetOpen(false));
-    document.getElementById("startGameButton").addEventListener("click", continueFromHome);
+    document.getElementById("startGameButton").addEventListener("click", openModeSelector);
+    document.querySelectorAll("[data-mode-select]").forEach(button => button.addEventListener("click", () => { const mode=button.dataset.modeSelect; document.getElementById("modeSelectorModal")?.classList.remove("show"); beginModeRound(mode); }));
+    document.getElementById("closeModeSelectorButton")?.addEventListener("click", () => document.getElementById("modeSelectorModal")?.classList.remove("show"));
+    document.querySelectorAll("[data-stats-mode]").forEach(button => button.addEventListener("click", () => selectStatsMode(button.dataset.statsMode)));
     document.getElementById("openLevelsButton").addEventListener("click", () => {
         renderLevelsScreen();
         showScreen("levels");
@@ -1958,14 +2143,17 @@
 
     function boot() {
         // İlk seviye her zaman açık
-        unlockLevel(1);
+        const first = getActiveLevels()[0];
+        if (first) unlockLevel(first.id);
         saveProgress();
         updateHomeStats();
 
         showScreen("home");
     }
 
+    setActiveMode("normal");
     applySettingsUI();
+    selectStatsMode("normal");
     updateStatsUI();
     boot();
 })();
