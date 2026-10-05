@@ -445,10 +445,23 @@ LEVELS.forEach((level) => {
     level.gridSize = level.id <= 3 ? 17 : level.id <= 8 ? 19 : level.id <= 16 ? 21 : 23;
 });
 
+var ALL_LEVELS = LEVELS.slice();
+var ACTIVE_LEVELS = ALL_LEVELS.slice();
+
+function setActiveMode(mode) {
+    const modeKey = mode === "timeAttack" ? 2 : mode === "extreme" ? 0 : 1;
+    ACTIVE_LEVELS = ALL_LEVELS.filter((level) => level.id % 3 === modeKey);
+    if (!ACTIVE_LEVELS.length) ACTIVE_LEVELS = ALL_LEVELS.slice();
+}
+
+function getActiveLevels() {
+    return ACTIVE_LEVELS;
+}
+
 function getLevelById(id) {
-    return LEVELS.find((level) => level.id === id) || null;
+    return ACTIVE_LEVELS.find((level) => level.id === id) || null;
 }
 
 function getTotalLevelCount() {
-    return LEVELS.length;
+    return ACTIVE_LEVELS.length;
 }
