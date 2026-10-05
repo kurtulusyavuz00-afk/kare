@@ -45,13 +45,12 @@
     const homeLastLevelText = document.getElementById("homeLastLevelText");
     const homeProgressFill = document.getElementById("homeProgressFill");
     const homeProgressText = document.getElementById("homeProgressText");
-    const soundToggle = document.getElementById("soundToggle");
-    const soundToggleLabel = document.getElementById("soundToggleLabel");
     const completedLevelModal = document.getElementById("completedLevelModal");
     const settingsSoundToggle = document.getElementById("settingsSoundToggle");
     const settingsCollapsibleClues = document.getElementById("settingsCollapsibleClues");
     const cluesCard = document.getElementById("cluesCard");
     const cluePanelHandle = document.getElementById("cluePanelHandle");
+    const cluesSheetBackdrop = document.getElementById("cluesSheetBackdrop");
     const dictionaryList = document.getElementById("dictionaryList");
     const dictionaryEmpty = document.getElementById("dictionaryEmpty");
     const dictionaryLevelFilter = document.getElementById("dictionaryLevelFilter");
@@ -206,7 +205,7 @@
 
         const context = getAudioContext();
         if (!context) {
-            updateSoundToggle();
+
             return;
         }
 
@@ -216,11 +215,11 @@
                 !homeScreen.classList.contains("active") ||
                 context.state !== "running"
             ) {
-                updateSoundToggle();
+
                 return;
             }
             if (homeMusicRunning) {
-                updateSoundToggle();
+
                 return;
             }
 
@@ -229,9 +228,9 @@
             musicGain.gain.setTargetAtTime(0.7, context.currentTime, 0.6);
             playHomeMusicPhrase();
             homeMusicTimer = window.setInterval(playHomeMusicPhrase, 8200);
-            updateSoundToggle();
+
         }).catch(() => {
-            updateSoundToggle();
+
         });
     }
 
@@ -255,18 +254,18 @@
         audioUnlocked = true;
         const context = getAudioContext();
         if (!context) {
-            updateSoundToggle();
+
             return Promise.resolve(null);
         }
 
         return context.resume().then(() => {
-            updateSoundToggle();
+
             if (context.state === "running" && homeScreen.classList.contains("active")) {
                 startHomeMusic();
             }
             return context;
         }).catch(() => {
-            updateSoundToggle();
+
             return null;
         });
     }
@@ -345,7 +344,7 @@
                 }
             }).catch(() => {});
         }
-        updateSoundToggle();
+
     }
 
     /* -----------------------------------------------------
@@ -1668,11 +1667,28 @@
         closeAnswerModal();
     }
     function saveSettings() { try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch (error) {} }
+    function setCluesSheetOpen(open) {
+        const isOpen = Boolean(open) && Boolean(settings.collapsibleClues);
+        cluesCard.classList.toggle("is-sheet-open", isOpen);
+        cluesCard.classList.toggle("is-collapsed", !isOpen);
+        cluesSheetBackdrop.classList.toggle("is-visible", isOpen);
+        cluePanelHandle.setAttribute("aria-expanded", String(isOpen));
+        cluesSheetBackdrop.setAttribute("aria-hidden", String(!isOpen));
+    }
+
     function applySettingsUI() {
-        document.body.classList.toggle("collapsible-clues-enabled", Boolean(settings.collapsibleClues));
-        cluesCard.classList.toggle("is-collapsed", Boolean(settings.collapsibleClues));
+        const enabled = Boolean(settings.collapsibleClues);
+        document.body.classList.toggle("collapsible-clues-enabled", enabled);
         settingsSoundToggle.checked = soundEnabled;
-        settingsCollapsibleClues.checked = Boolean(settings.collapsibleClues);
+        settingsCollapsibleClues.checked = enabled;
+        if (!enabled) {
+            cluesCard.classList.remove("is-sheet-open", "is-collapsed");
+            cluesSheetBackdrop.classList.remove("is-visible");
+            cluesSheetBackdrop.setAttribute("aria-hidden", "true");
+            cluePanelHandle.setAttribute("aria-expanded", "false");
+        } else {
+            setCluesSheetOpen(false);
+        }
     }
     function openSettings() { applySettingsUI(); showScreen("settings"); }
     function getSolvedDictionaryWords() {
@@ -1723,26 +1739,47 @@
     document.getElementById("backHomeFromSettings").addEventListener("click", () => showScreen("home"));
     document.getElementById("backHomeFromDictionary").addEventListener("click", () => showScreen("home"));
     settingsSoundToggle.addEventListener("change", () => setSoundEnabled(settingsSoundToggle.checked));
-    settingsCollapsibleClues.addEventListener("change", () => { settings.collapsibleClues=settingsCollapsibleClues.checked; saveSettings(); applySettingsUI(); });
+    settingsCollapsibleClues.addEventListener("change", () => {
+        settings.collapsibleClues = settingsCollapsibleClues.checked;
+        saveSettings();
+        applySettingsUI();
+    });
     dictionaryLevelFilter.addEventListener("change", renderDictionary);
     dictionaryDifficultyFilter.addEventListener("change", renderDictionary);
     dictionarySearch.addEventListener("input", renderDictionary);
     document.getElementById("replayLevelButton").addEventListener("click", () => { const id=pendingCompletedLevelId; completedLevelModal.classList.remove("show"); pendingCompletedLevelId=null; if(id) startLevel(id,{replay:true,forceNew:true}); });
     document.getElementById("showAnswersButton").addEventListener("click", () => { const id=pendingCompletedLevelId; completedLevelModal.classList.remove("show"); pendingCompletedLevelId=null; if(id) startLevel(id,{showAnswers:true}); });
     document.getElementById("cancelCompletedLevelButton").addEventListener("click", () => { completedLevelModal.classList.remove("show"); pendingCompletedLevelId=null; });
-    cluePanelHandle.addEventListener("click", () => { if(settings.collapsibleClues) cluesCard.classList.toggle("is-collapsed"); });
     let clueDragStartY = null;
+    let clueDragMoved = false;
     cluePanelHandle.addEventListener("pointerdown", event => {
         if (!settings.collapsibleClues) return;
         clueDragStartY = event.clientY;
+        clueDragMoved = false;
         cluePanelHandle.setPointerCapture?.(event.pointerId);
+    });
+    cluePanelHandle.addEventListener("pointermove", event => {
+        if (!settings.collapsibleClues || clueDragStartY === null) return;
+        if (Math.abs(event.clientY - clueDragStartY) > 8) clueDragMoved = true;
     });
     cluePanelHandle.addEventListener("pointerup", event => {
         if (!settings.collapsibleClues || clueDragStartY === null) return;
         const delta = event.clientY - clueDragStartY;
-        if (Math.abs(delta) > 24) cluesCard.classList.toggle("is-collapsed", delta > 0);
+        const wasOpen = cluesCard.classList.contains("is-sheet-open");
         clueDragStartY = null;
+        if (Math.abs(delta) > 24) {
+            setCluesSheetOpen(delta < 0);
+        } else if (!clueDragMoved) {
+            setCluesSheetOpen(!wasOpen);
+        }
+        clueDragMoved = false;
     });
+    cluePanelHandle.addEventListener("keydown", event => {
+        if (!settings.collapsibleClues || (event.key !== "Enter" && event.key !== " ")) return;
+        event.preventDefault();
+        setCluesSheetOpen(!cluesCard.classList.contains("is-sheet-open"));
+    });
+    cluesSheetBackdrop.addEventListener("click", () => setCluesSheetOpen(false));
     document.getElementById("startGameButton").addEventListener("click", continueFromHome);
     document.getElementById("openLevelsButton").addEventListener("click", () => {
         renderLevelsScreen();
@@ -1834,7 +1871,7 @@
         unlockLevel(1);
         saveProgress();
         updateHomeStats();
-        updateSoundToggle();
+
         showScreen("home");
     }
 
