@@ -64,6 +64,7 @@
     const STORAGE_KEY = "kelimeBulmaca.progress.v1";
     const SOUND_STORAGE_KEY = "kare.sound.enabled.v1";
     const SETTINGS_STORAGE_KEY = "kare.settings.v1";
+    const STATS_STORAGE_KEY = "kare.stats.v1";
     const LEVEL_STATUS = {
         LOCKED: "locked",
         UNLOCKED: "unlocked",
@@ -89,6 +90,65 @@
     let wrongTotal = 0;
     let levelStartedAt = 0;
     let answerBusy = false;
+    function loadLearningStats() {
+        const defaults = { totalCorrect: 0, totalWrong: 0, totalHints: 0, totalWordsSolved: 0, uniqueWords: [], totalPlayTimeMs: 0, puzzlesCompleted: 0, currentStreak: 0, bestStreak: 0, timeAttackBestScore: 0 };
+        try { return Object.assign(defaults, JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || "{}")); } catch (error) { return defaults; }
+    }
+    function saveLearningStats() { try { localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats)); } catch (error) {} }
+    function recordCorrectWord(wordId) {
+        stats.totalCorrect += 1;
+        if (!stats.uniqueWords.includes(wordId)) { stats.uniqueWords.push(wordId); stats.totalWordsSolved = stats.uniqueWords.length; }
+        answerStreak += 1; bestAnswerStreak = Math.max(bestAnswerStreak, answerStreak);
+        stats.currentStreak = answerStreak; stats.bestStreak = Math.max(stats.bestStreak, bestAnswerStreak);
+        saveLearningStats(); updateStatsUI();
+    }
+    function recordWrongWord() { stats.totalWrong += 1; answerStreak = 0; stats.currentStreak = 0; saveLearningStats(); updateStatsUI(); }
+    function recordHintUsed() { stats.totalHints += 1; saveLearningStats(); }
+    function updateStatsUI() {
+        const streakEl=document.getElementById("homeStreakText"), learnedEl=document.getElementById("homeWordsText");
+        if (streakEl) streakEl.textContent = "🔥 " + answerStreak;
+        if (learnedEl) learnedEl.textContent = String(stats.uniqueWords.length);
+        const set=(id,value)=>{const el=document.getElementById(id); if(el) el.textContent=value;};
+        const totalAnswers=stats.totalCorrect+stats.totalWrong;
+        set("statsLearnedWords", stats.uniqueWords.length); set("statsCorrect", stats.totalCorrect); set("statsWrong", stats.totalWrong);
+        set("statsAccuracy", totalAnswers ? Math.round(stats.totalCorrect/totalAnswers*100) + "%" : "—");
+        set("statsBestStreak", "🔥 " + Math.max(stats.bestStreak,bestAnswerStreak)); set("statsHints", stats.totalHints);
+        set("statsPuzzles", stats.puzzlesCompleted); set("statsTimeAttack", stats.timeAttackBestScore || 0);
+    }
+    function stopTimeAttackTimer() { if (timeAttackInterval !== null) { window.clearInterval(timeAttackInterval); timeAttackInterval = null; } }
+    function updateTimeAttackUI() {
+        const timer=document.getElementById("timeAttackTimer"), score=document.getElementById("timeAttackScore");
+        if (timer) timer.textContent = formatTime(Math.max(0,timeAttackRemainingMs));
+        if (score) score.textContent = String(timeAttackScore);
+        const wrap=document.getElementById("timeAttackHud"); if (wrap) wrap.classList.toggle("is-danger", timeAttackRemainingMs <= 15000);
+    }
+    function startTimeAttackTimer() {
+        stopTimeAttackTimer();
+        timeAttackInterval = window.setInterval(() => {
+            timeAttackRemainingMs -= 100;
+            if (timeAttackRemainingMs <= 0) { timeAttackRemainingMs = 0; updateTimeAttackUI(); stopTimeAttackTimer(); showTimeAttackEndModal(false); return; }
+            updateTimeAttackUI();
+        }, 100);
+        updateTimeAttackUI();
+    }
+    function showTimeAttackEndModal(completed) {
+        stopTimeAttackTimer();
+        const modal=document.getElementById("timeAttackModal"), title=document.getElementById("timeAttackEndTitle"), textEl=document.getElementById("timeAttackEndText"), scoreEl=document.getElementById("timeAttackEndScore");
+        if (!modal) return;
+        title.textContent = completed ? "Tur tamamlandı!" : "Süre doldu!";
+        textEl.textContent = completed ? "Bulmacayı süre bitmeden tamamladın." : "Zaman bitti. Bir sonraki turda daha yüksek skor dene.";
+        scoreEl.innerHTML = "<strong>" + timeAttackScore + "</strong> puan · " + timeAttackWords + " kelime";
+        if (timeAttackScore > (stats.timeAttackBestScore || 0)) { stats.timeAttackBestScore = timeAttackScore; saveLearningStats(); }
+        updateStatsUI(); modal.classList.add("show"); playSoundEffect(completed ? "complete" : "wrong");
+    }
+    function beginTimeAttackRound() {
+        const unlocked=LEVELS.filter(level => progress.levels[level.id] && progress.levels[level.id].status !== LEVEL_STATUS.LOCKED);
+        if (!unlocked.length) return;
+        const level=unlocked[Math.floor(Math.random()*unlocked.length)];
+        gameMode="timeAttack"; timeAttackRemainingMs=90000; timeAttackScore=0; timeAttackWords=0;
+        startLevel(level.id,{forceNew:true,timeAttack:true});
+    }
+
     let soundEnabled = true;
     let settings = { collapsibleClues: false };
     try { settings = Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}")); } catch (error) {}
@@ -104,6 +164,13 @@
     let homeMusicTimer = null;
     let homeMusicRunning = false;
     let audioUnlocked = false;
+    let gameMode = "normal";
+    let timeAttackRemainingMs = 90000;
+    let timeAttackInterval = null;
+    let timeAttackScore = 0;
+    let timeAttackWords = 0;
+    let answerStreak = 0;
+    let bestAnswerStreak = 0;
 
     function getAudioContext() {
         if (audioContext) {
@@ -119,7 +186,7 @@
             audioContext = new AudioContextClass();
             masterGain = audioContext.createGain();
             musicGain = audioContext.createGain();
-            masterGain.gain.value = soundEnabled ? 0.68 : 0;
+            masterGain.gain.value = soundEnabled ? 0.9 : 0;
             musicGain.gain.value = 0;
             musicGain.connect(masterGain);
             masterGain.connect(audioContext.destination);
@@ -179,7 +246,7 @@
                 destination: musicGain,
                 delay: index * 0.12,
                 duration: 7.7,
-                volume: 0.009,
+                volume: 0.022,
                 attack: 1.1,
                 waveform: "sine"
             });
@@ -191,7 +258,7 @@
                 destination: musicGain,
                 delay: index * 1.35,
                 duration: 1.35,
-                volume: 0.014,
+                volume: 0.03,
                 attack: 0.16,
                 waveform: "sine"
             });
@@ -225,7 +292,7 @@
 
             homeMusicRunning = true;
             musicGain.gain.cancelScheduledValues(context.currentTime);
-            musicGain.gain.setTargetAtTime(0.7, context.currentTime, 0.6);
+            musicGain.gain.setTargetAtTime(0.85, context.currentTime, 0.6);
             playHomeMusicPhrase();
             homeMusicTimer = window.setInterval(playHomeMusicPhrase, 8200);
 
@@ -312,7 +379,7 @@
             playTone(frequency, {
                 delay,
                 duration,
-                volume: kind === "wrong" ? 0.035 : 0.052,
+                volume: kind === "wrong" ? 0.06 : 0.085,
                 attack: 0.018,
                 waveform: "sine"
             });
@@ -338,7 +405,7 @@
                 if (!soundEnabled || !masterGain) {
                     return;
                 }
-                masterGain.gain.setTargetAtTime(0.68, context.currentTime, 0.04);
+                masterGain.gain.setTargetAtTime(0.9, context.currentTime, 0.04);
                 if (homeScreen.classList.contains("active")) {
                     startHomeMusic();
                 }
@@ -983,7 +1050,9 @@
         gameScreen.classList.toggle("active", screen === "game");
         settingsScreen.classList.toggle("active", screen === "settings");
         dictionaryScreen.classList.toggle("active", screen === "dictionary");
+        statsScreen.classList.toggle("active", screen === "stats");
         if (screen === "home") {
+            stopTimeAttackTimer();
             startHomeMusic();
         } else {
             stopHomeMusic();
@@ -1002,6 +1071,7 @@
         homeProgressFill.style.width = `${percent}%`;
         homeProgressFill.setAttribute("aria-valuenow", String(Math.round(percent)));
         homeProgressText.textContent = `${Math.round(percent)}%`;
+        updateStatsUI();
     }
 
     const LEVEL_CATEGORIES = [
@@ -1369,6 +1439,8 @@
         if (userAnswer === correctAnswer) {
             answerBusy = true;
             solvedWords.add(currentWord.word.id);
+            recordCorrectWord(currentWord.word.id);
+            if (gameMode === "timeAttack") { timeAttackWords += 1; timeAttackRemainingMs = Math.min(120000, timeAttackRemainingMs + 10000); timeAttackScore += 100 + (normalizeAnswer(currentWord.word.answer).length * 20) + (answerStreak * 10); updateTimeAttackUI(); }
             resultMessage.textContent = "✓ Doğru cevap!";
             resultMessage.className = "result-message is-success";
             playSoundEffect("correct");
@@ -1385,6 +1457,8 @@
         wrongAttempts[wordId].count += 1;
         wrongAttempts[wordId].lastAnswer = userAnswer;
         wrongTotal += 1;
+        recordWrongWord();
+        if (gameMode === "timeAttack") { timeAttackRemainingMs = Math.max(0, timeAttackRemainingMs - 3000); timeAttackScore = Math.max(0, timeAttackScore - 25); updateTimeAttackUI(); if (timeAttackRemainingMs === 0) { showTimeAttackEndModal(false); return; } }
 
         resultMessage.textContent = "Yanlış cevap.";
         resultMessage.className = "result-message is-error";
@@ -1411,6 +1485,8 @@
         const answer = normalizeAnswer(placement.word.answer);
         const firstLetter = answer[0];
         hintsUsed += 1;
+        recordHintUsed();
+        if (gameMode === "timeAttack") { timeAttackRemainingMs = Math.max(0, timeAttackRemainingMs - 5000); updateTimeAttackUI(); }
         answerInput.value = firstLetter;
         resultMessage.textContent = `İpucu: ilk harf "${firstLetter}"`;
         resultMessage.className = "result-message is-hint";
@@ -1421,6 +1497,8 @@
     /* -----------------------------------------------------
        REVEAL / COMPLETE
     ----------------------------------------------------- */
+
+    function getGridCellElement(row, col) { const cells=puzzleElement.querySelectorAll(".cell"); const bounds=getGridBounds(grid,gridSize); const localRow=row-bounds.minRow, localCol=col-bounds.minCol, columnCount=bounds.maxCol-bounds.minCol+1; return cells[localRow*columnCount+localCol] || null; }
 
     function animateCell(row, col) {
         const cells = puzzleElement.querySelectorAll(".cell");
@@ -1448,11 +1526,8 @@
         renderGrid();
         renderClues();
 
-        cells.forEach((cell, index) => {
-            setTimeout(() => {
-                animateCell(cell.row, cell.col);
-            }, index * 70);
-        });
+        cells.forEach((cell, index) => { setTimeout(() => { const el=getGridCellElement(cell.row,cell.col); if(el){el.classList.add("correct-burst"); setTimeout(()=>el.classList.remove("correct-burst"),520);} animateCell(cell.row,cell.col); }, index * 85); });
+        puzzleElement.classList.remove("puzzle-success-pulse"); void puzzleElement.offsetWidth; puzzleElement.classList.add("puzzle-success-pulse"); setTimeout(()=>puzzleElement.classList.remove("puzzle-success-pulse"),650);
 
         const animationDuration = (cells.length - 1) * 70 + 420;
 
@@ -1477,6 +1552,7 @@
 
     function showCompleteModal() {
         replayMode = false;
+        if (gameMode === "timeAttack") { stats.puzzlesCompleted += 1; stats.totalPlayTimeMs += Math.max(0,Date.now()-levelStartedAt); saveLearningStats(); showTimeAttackEndModal(true); return; }
         const elapsed = Date.now() - levelStartedAt;
         const levelEntry = progress.levels[currentLevelId];
         levelEntry.status = LEVEL_STATUS.COMPLETED;
@@ -1497,7 +1573,11 @@
             unlockLevel(nextId);
         }
         saveProgress();
+        stats.puzzlesCompleted += 1;
+        stats.totalPlayTimeMs += elapsed;
+        saveLearningStats();
         updateHomeStats();
+        updateStatsUI();
 
         completeTitle.textContent = `${getLevelDisplayTitle(getLevelById(currentLevelId))} tamamlandı!`;
         completeStats.innerHTML = `
@@ -1608,6 +1688,7 @@
             return;
         }
         replayMode = Boolean(options && options.replay);
+        if (options && options.timeAttack) { gameMode="timeAttack"; timeAttackRemainingMs=90000; } else if (!(options && options.keepMode)) { gameMode="normal"; }
         const showAnswersMode = Boolean(options && options.showAnswers);
         currentLevelId = levelId;
         gridSize = level.gridSize || 15;
@@ -1662,6 +1743,8 @@
         }
         showScreen("game");
         renderGrid(); renderClues(); updateProgressUI();
+        const hud=document.getElementById("timeAttackHud"); if(hud){hud.hidden=gameMode!=="timeAttack"; updateTimeAttackUI();}
+        if(gameMode==="timeAttack") startTimeAttackTimer(); else stopTimeAttackTimer();
         completeModal.classList.remove("show", "celebrate");
         completedLevelModal.classList.remove("show");
         closeAnswerModal();
@@ -1734,6 +1817,11 @@
         { once: true, capture: true }
     );
 
+    document.getElementById("openTimeAttackButton")?.addEventListener("click", beginTimeAttackRound);
+    document.getElementById("openStatsButton")?.addEventListener("click", () => { updateStatsUI(); showScreen("stats"); });
+    document.getElementById("backHomeFromStats")?.addEventListener("click", () => showScreen("home"));
+    document.getElementById("timeAttackNewRoundButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); beginTimeAttackRound(); });
+    document.getElementById("timeAttackExitButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); gameMode="normal"; showScreen("home"); });
     document.getElementById("openSettingsButton").addEventListener("click", openSettings);
     document.getElementById("openDictionaryButton").addEventListener("click", openDictionary);
     document.getElementById("backHomeFromSettings").addEventListener("click", () => showScreen("home"));
@@ -1876,5 +1964,6 @@
     }
 
     applySettingsUI();
+    updateStatsUI();
     boot();
 })();
