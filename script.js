@@ -15,6 +15,7 @@
     const gameScreen = document.getElementById("gameScreen");
     const settingsScreen = document.getElementById("settingsScreen");
     const dictionaryScreen = document.getElementById("dictionaryScreen");
+    const statsScreen = document.getElementById("statsScreen");
     const levelsGrid = document.getElementById("levelsGrid");
 
     const puzzleElement = document.getElementById("puzzle");
@@ -149,6 +150,7 @@
         startLevel(level.id,{forceNew:true,timeAttack:true});
     }
 
+    let stats = loadLearningStats();
     let soundEnabled = true;
     let settings = { collapsibleClues: false };
     try { settings = Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}")); } catch (error) {}
