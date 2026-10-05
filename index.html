@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>KARE — Kelime Bulmaca</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261005-1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -160,8 +160,9 @@
                 </div>
             </section>
 
+            <div id="cluesSheetBackdrop" class="clues-sheet-backdrop" aria-hidden="true"></div>
             <section id="cluesCard" class="clues-card">
-                <div id="cluePanelHandle" class="clue-panel-handle" role="button" tabindex="0" aria-label="Tanımları aç veya kapat"><span>tanımlar</span><span class="clue-panel-chevron">⌃</span></div>
+                <div id="cluePanelHandle" class="clue-panel-handle" role="button" tabindex="0" aria-expanded="false" aria-label="Tanımları aç veya kapat"><span class="clue-panel-handle-line" aria-hidden="true"></span><span class="clue-panel-handle-title">Tanımlar</span><span class="clue-panel-chevron" aria-hidden="true">⌃</span></div>
                 <div class="clues-section">
                     <div class="clues-title"><span>Yatay</span></div>
                     <div id="acrossClues"></div>
@@ -237,7 +238,7 @@
 
 
 <script src="levels.js"></script>
-<script src="script.js?v=20261004-2"></script>
+<script src="script.js?v=20261005-1"></script>
 
 </body>
 </html>
