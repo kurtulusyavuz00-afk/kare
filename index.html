@@ -33,11 +33,15 @@
             <button id="openLevelsButton" class="secondary-button home-cta" type="button">
                 Seviyeleri Gör
             </button>
+            <button id="openTimeAttackButton" class="secondary-button home-cta time-attack-home-button" type="button"><span>⏱️ Time Attack</span><span>90 sn</span></button>
             <div class="home-secondary-actions">
                 <button id="openDictionaryButton" class="secondary-button home-utility-button" type="button">Sözlük</button>
+                <button id="openStatsButton" class="secondary-button home-utility-button" type="button">İstatistikler</button>
                 <button id="openSettingsButton" class="secondary-button home-utility-button" type="button">Ayarlar</button>
             </div>
         </div>
+
+        <div class="home-streak-card"><div><span class="home-stat-label">Kelime streak</span><strong id="homeStreakText">🔥 0</strong></div><div><span class="home-stat-label">Öğrenilen kelime</span><strong id="homeWordsText">0</strong></div></div>
 
         <div class="home-stats">
             <div class="home-stat">
@@ -131,6 +135,9 @@
 </section>
 
 <!-- ===================== GAME ===================== -->
+<section id="statsScreen" class="screen utility-screen"><div class="screen-header"><button id="backHomeFromStats" class="icon-button" type="button" aria-label="Geri">←</button><div><div class="section-label">İSTATİSTİKLER</div><h2 class="screen-heading">Kelime Öğrenme</h2></div></div><div class="learning-summary"><div class="learning-hero"><span>Öğrenilen kelime</span><strong id="statsLearnedWords">0</strong><small>benzersiz İngilizce kelime</small></div><div class="learning-grid"><div class="learning-stat"><span>Doğru cevap</span><strong id="statsCorrect">0</strong></div><div class="learning-stat"><span>Yanlış cevap</span><strong id="statsWrong">0</strong></div><div class="learning-stat"><span>Başarı oranı</span><strong id="statsAccuracy">—</strong></div><div class="learning-stat"><span>En iyi streak</span><strong id="statsBestStreak">🔥 0</strong></div><div class="learning-stat"><span>İpucu kullanımı</span><strong id="statsHints">0</strong></div><div class="learning-stat"><span>Tamamlanan bulmaca</span><strong id="statsPuzzles">0</strong></div><div class="learning-stat"><span>Time Attack rekoru</span><strong id="statsTimeAttack">0</strong></div></div></div></section>
+
+<!-- ===================== GAME ===================== -->
 <section id="gameScreen" class="screen">
     <div class="app">
         <header class="app-header">
@@ -142,7 +149,7 @@
                 </div>
             </div>
 
-            <div class="header-right">
+            <div class="header-right"><div id="timeAttackHud" class="time-attack-hud" hidden><span>⏱ <strong id="timeAttackTimer">01:30</strong></span><span>Skor <strong id="timeAttackScore">0</strong></span></div>
                 <button id="openLevelsFromGame" class="ghost-button" type="button">Seviyeler</button>
                 <div class="progress-container">
                     <div id="progressText" class="progress-text">0 / 0</div>
@@ -221,6 +228,9 @@
     </div>
 </div>
 
+
+<!-- ===================== TIME ATTACK MODAL ===================== -->
+<div id="timeAttackModal" class="modal"><div class="complete-box time-attack-end-box"><div class="complete-icon">⏱</div><div class="complete-title" id="timeAttackEndTitle">Tur tamamlandı!</div><div class="complete-text" id="timeAttackEndText">Bulmacayı süre bitmeden tamamladın.</div><div id="timeAttackEndScore" class="time-attack-end-score"><strong>0</strong> puan · 0 kelime</div><div class="complete-actions"><button id="timeAttackNewRoundButton" class="primary-button complete-button" type="button">Yeni Tur</button><button id="timeAttackExitButton" class="secondary-button complete-button" type="button">Ana Sayfa</button></div></div></div>
 
 <!-- ===================== COMPLETE MODAL ===================== -->
 <div id="completeModal" class="modal">
