@@ -1180,16 +1180,18 @@ body.collapsible-clues-enabled .clues-card {
     z-index: 40;
     left: 50%;
     bottom: 0;
-    width: min(720px, calc(100% - 24px));
-    max-height: min(76dvh, 680px);
+    width: min(720px, calc(100vw - 24px));
+    height: min(76dvh, 680px);
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 8px);
     margin: 0;
     padding: 58px 22px calc(22px + var(--safe-bottom));
     display: block;
     overflow: hidden;
-    transform: translate(-50%, calc(100% - 58px));
+    box-sizing: border-box;
+    transform: translate(-50%, calc(100% - clamp(58px, 9dvh, 72px)));
     border: 1px solid rgba(0, 0, 0, 0.09);
     border-bottom: 0;
-    border-radius: 26px 26px 0 0;
+    border-radius: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) 0 0;
     box-shadow: 0 -18px 55px rgba(0, 0, 0, 0.13);
     transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease;
 }
@@ -1249,14 +1251,15 @@ body.collapsible-clues-enabled .clues-card .clues-section + .clues-section { mar
     .dictionary-toolbar { grid-template-columns:1fr 1fr; }
     .dictionary-search { grid-column:1 / -1; }
     body.collapsible-clues-enabled .clues-card {
-        width: 100%;
-        max-height: min(78dvh, 680px);
-        padding-left: 18px;
-        padding-right: 18px;
+        width: 100vw;
+        height: min(78dvh, 680px);
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 6px);
+        padding-left: clamp(14px, 4vw, 20px);
+        padding-right: clamp(14px, 4vw, 20px);
         border-left: 0;
         border-right: 0;
-        border-radius: 24px 24px 0 0;
-        transform: translateY(calc(100% - 58px));
+        border-radius: clamp(20px, 5vw, 26px) clamp(20px, 5vw, 26px) 0 0;
+        transform: translateY(calc(100% - clamp(58px, 10dvh, 72px)));
     }
     body.collapsible-clues-enabled .clues-card.is-sheet-open { transform: translateY(0); }
 }
