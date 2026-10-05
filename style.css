@@ -1166,12 +1166,10 @@ input {
     position: fixed;
     inset: 0;
     z-index: 38;
-    background: rgba(15, 15, 15, 0.28);
+    background: transparent;
     opacity: 0;
     pointer-events: none;
     transition: opacity .24s ease;
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
 }
 body.collapsible-clues-enabled .clues-sheet-backdrop.is-visible {
     opacity: 1;
