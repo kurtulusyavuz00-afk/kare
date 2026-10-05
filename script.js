@@ -2005,7 +2005,7 @@
     document.getElementById("openStatsButton")?.addEventListener("click", () => { selectStatsMode(gameMode); showScreen("stats"); });
     document.getElementById("backHomeFromStats")?.addEventListener("click", () => showScreen("home"));
     document.getElementById("timeAttackNewRoundButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); beginTimeAttackRound(); });
-    document.getElementById("timeAttackExitButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); gameMode="normal"; showScreen("home"); });
+    document.getElementById("timeAttackExitButton")?.addEventListener("click", () => { document.getElementById("timeAttackModal")?.classList.remove("show"); activateMode("normal"); updateExtremeUI(); showScreen("home"); });
     document.getElementById("openSettingsButton").addEventListener("click", openSettings);
     document.getElementById("openDictionaryButton").addEventListener("click", openDictionary);
     document.getElementById("backHomeFromSettings").addEventListener("click", () => showScreen("home"));
@@ -2111,8 +2111,8 @@
 
     nextLevelButton.addEventListener("click", () => {
         completeModal.classList.remove("show", "celebrate");
-        const nextId = currentLevelId + 1;
-        if (getLevelById(nextId)) {
+        const nextId = getNextLevelId();
+        if (nextId !== null) {
             startLevel(nextId, { forceNew: true });
         }
     });
