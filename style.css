@@ -1158,15 +1158,115 @@ input {
 .dictionary-meta { margin-top:10px; color:var(--muted); font-size:12px; }
 .dictionary-empty { padding:40px 20px; text-align:center; color:var(--muted); background:var(--card); border:1px dashed var(--border); border-radius:16px; }
 .clue-panel-handle { display:none; }
-body.collapsible-clues-enabled .clues-card { position:relative; }
-@media (max-width: 560px) {
-  .dictionary-toolbar { grid-template-columns:1fr 1fr; }
-  .dictionary-search { grid-column:1 / -1; }
-  body.collapsible-clues-enabled .clues-card { padding-top:44px; max-height:62px; overflow:hidden; transition:max-height .28s ease; }
-  body.collapsible-clues-enabled .clues-card.is-collapsed { max-height:62px; }
-  body.collapsible-clues-enabled .clues-card:not(.is-collapsed) { max-height:70vh; overflow:auto; }
-  body.collapsible-clues-enabled .clue-panel-handle { display:flex; position:absolute; top:0; left:0; right:0; height:42px; align-items:center; justify-content:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); cursor:grab; border-bottom:1px solid var(--border); background:var(--card); }
-  body.collapsible-clues-enabled .clue-panel-chevron { transition:transform .2s ease; }
-  body.collapsible-clues-enabled .clues-card:not(.is-collapsed) .clue-panel-chevron { transform:rotate(180deg); }
+
+/* =====================================================
+   DEFINITIONS BOTTOM SHEET
+===================================================== */
+.clues-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 38;
+    background: rgba(15, 15, 15, 0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .24s ease;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
 }
-@media (max-width: 480px) { .dictionary-toolbar { grid-template-columns:1fr; } .dictionary-search { grid-column:auto; } .home-secondary-actions { grid-template-columns:1fr 1fr; } }
+body.collapsible-clues-enabled .clues-sheet-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+body.collapsible-clues-enabled .clues-card {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    bottom: 0;
+    width: min(720px, calc(100% - 24px));
+    max-height: min(76dvh, 680px);
+    margin: 0;
+    padding: 58px 22px calc(22px + var(--safe-bottom));
+    display: block;
+    overflow: hidden;
+    transform: translate(-50%, calc(100% - 58px));
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-bottom: 0;
+    border-radius: 26px 26px 0 0;
+    box-shadow: 0 -18px 55px rgba(0, 0, 0, 0.13);
+    transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease;
+}
+body.collapsible-clues-enabled .clues-card.is-sheet-open {
+    transform: translate(-50%, 0);
+    box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.18);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+body.collapsible-clues-enabled .clue-panel-handle {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 58px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 0 18px;
+    border: 0;
+    border-bottom: 1px solid #ededed;
+    background: rgba(255, 255, 255, 0.97);
+    color: var(--muted);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+body.collapsible-clues-enabled .clue-panel-handle:active { cursor: grabbing; }
+body.collapsible-clues-enabled .clue-panel-handle-line {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: #cfcfcf;
+    transform: translateX(-50%);
+}
+body.collapsible-clues-enabled .clue-panel-handle-title {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #4a4a4a;
+}
+body.collapsible-clues-enabled .clue-panel-chevron {
+    margin-top: 6px;
+    font-size: 16px;
+    line-height: 1;
+    transition: transform .22s ease;
+}
+body.collapsible-clues-enabled .clues-card.is-sheet-open .clue-panel-chevron { transform: rotate(180deg); }
+body.collapsible-clues-enabled .clues-card .clues-section + .clues-section { margin-top: 22px; }
+@media (max-width: 560px) {
+    .dictionary-toolbar { grid-template-columns:1fr 1fr; }
+    .dictionary-search { grid-column:1 / -1; }
+    body.collapsible-clues-enabled .clues-card {
+        width: 100%;
+        max-height: min(78dvh, 680px);
+        padding-left: 18px;
+        padding-right: 18px;
+        border-left: 0;
+        border-right: 0;
+        border-radius: 24px 24px 0 0;
+        transform: translateY(calc(100% - 58px));
+    }
+    body.collapsible-clues-enabled .clues-card.is-sheet-open { transform: translateY(0); }
+}
+@media (max-width: 480px) {
+    .dictionary-toolbar { grid-template-columns:1fr; }
+    .dictionary-search { grid-column:auto; }
+    .home-secondary-actions { grid-template-columns:1fr 1fr; }
+}
+@media (min-width: 900px) {
+    body.collapsible-clues-enabled .clues-card { width: min(680px, calc(100% - 40px)); }
+}
